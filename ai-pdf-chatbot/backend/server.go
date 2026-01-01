@@ -18,9 +18,9 @@ import (
 
 // Server represents the HTTP server for the AI PDF Chatbot.
 type Server struct {
-	cfg         Config
-	vs          *VectorStore
-	ingestGraph *graph.StateRunnable[IngestionState]
+	cfg           Config
+	vs            *VectorStore
+	ingestGraph   *graph.StateRunnable[IngestionState]
 	retrieveGraph *graph.StateRunnable[RetrievalState]
 
 	// Session management
@@ -50,11 +50,11 @@ func NewServer(cfg Config) (*Server, error) {
 	}
 
 	return &Server{
-		cfg:          cfg,
-		vs:           vs,
-		ingestGraph:  ingestRunnable,
+		cfg:           cfg,
+		vs:            vs,
+		ingestGraph:   ingestRunnable,
 		retrieveGraph: retrieveRunnable,
-		sessions:     make(map[string][]llms.MessageContent),
+		sessions:      make(map[string][]llms.MessageContent),
 	}, nil
 }
 
@@ -98,7 +98,7 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	stats, _ := s.vs.GetStats(r.Context())
 
 	response := map[string]any{
-		"status": "ok",
+		"status":    "ok",
 		"documents": stats.TotalDocuments,
 	}
 	w.Header().Set("Content-Type", "application/json")

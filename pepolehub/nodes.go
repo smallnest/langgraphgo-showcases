@@ -120,15 +120,15 @@ func ScrapeWebPageNode(ctx context.Context, state ResearchState) (ResearchState,
 // SummarizeContentNode - Modified to handle batch summarization
 func SummarizeContentNode(ctx context.Context, state ResearchState) (ResearchState, error) {
 	var summaries []WebSummary
-	
+
 	// Process ALL scraped contents in state, assuming they are new or we want to process all.
 	// Since ScrapedContents is "Appended", we might re-process if we loop.
 	// But this graph is DAG (mostly), so it's fine.
-	
+
 	for _, content := range state.ScrapedContents {
 		summary, err := summarizeWebContent(content.Url, content.Content, state.PersonName)
 		if err != nil {
-			continue 
+			continue
 		}
 		if summary != nil {
 			summaries = append(summaries, *summary)
@@ -167,32 +167,32 @@ func AggregateDataNode(ctx context.Context, state ResearchState) (ResearchState,
 	// JS: webSummaries: Annotation({ reducer: (state, update) => ... }) which appends.
 	// BUT AggregateDataNode returns { webSummaries: deduped }.
 	// If the reducer appends, then returning deduped list will duplicate everything again!
-	
+
 	// Wait, JS reducer: (state, update) => (Array.isArray(update) ? [...state, ...update] : [...state, update])
 	// So JS ALWAYS appends.
 	// AggregateData logic:
 	// const deduped = dedupeSummaries(summaries);
-    // return { webSummaries: deduped };
-    // This looks like it would double the list in JS too if it just returns it.
-    // Unless the JS code assumes that "aggregateData" is the *only* one writing to it at this stage or it overwrites?
-    // Actually, maybe I misread the JS.
-    // Let's check the JS code again.
-    
-    // JS:
-    // webSummaries: Annotation<WebSummary[], WebSummary | WebSummary[]>({
-    //   reducer: (state, update) => (Array.isArray(update) ? [...state, ...update] : [...state, update]),
-    //   default: () => [],
-    // }),
-    
-    // Yes, it appends.
-    
-    // To implement "Replace" behavior for a specific node in `langgraphgo` using `FieldMerger` is hard if the field is globally "Append".
-    // I can use a different field, e.g. `FinalSummaries`?
-    // Or I can just rely on `WriteReportNode` to dedupe internally before writing report, and skip `AggregateDataNode`'s modification of state.
-    
-    // Let's modify AggregateDataNode to NOT return WebSummaries, but just check status.
-    // And WriteReportNode will read WebSummaries and dedupe them locally.
-    
+	// return { webSummaries: deduped };
+	// This looks like it would double the list in JS too if it just returns it.
+	// Unless the JS code assumes that "aggregateData" is the *only* one writing to it at this stage or it overwrites?
+	// Actually, maybe I misread the JS.
+	// Let's check the JS code again.
+
+	// JS:
+	// webSummaries: Annotation<WebSummary[], WebSummary | WebSummary[]>({
+	//   reducer: (state, update) => (Array.isArray(update) ? [...state, ...update] : [...state, update]),
+	//   default: () => [],
+	// }),
+
+	// Yes, it appends.
+
+	// To implement "Replace" behavior for a specific node in `langgraphgo` using `FieldMerger` is hard if the field is globally "Append".
+	// I can use a different field, e.g. `FinalSummaries`?
+	// Or I can just rely on `WriteReportNode` to dedupe internally before writing report, and skip `AggregateDataNode`'s modification of state.
+
+	// Let's modify AggregateDataNode to NOT return WebSummaries, but just check status.
+	// And WriteReportNode will read WebSummaries and dedupe them locally.
+
 	return ResearchState{
 		Status: "Aggregation complete",
 	}, nil
@@ -206,8 +206,8 @@ func WriteReportNode(ctx context.Context, state ResearchState) (ResearchState, e
 		}, nil
 	}
 
-    // Dedupe locally before report generation
-    seen := make(map[string]bool)
+	// Dedupe locally before report generation
+	seen := make(map[string]bool)
 	var deduped []WebSummary
 	for _, s := range state.WebSummaries {
 		if !seen[s.Url] {

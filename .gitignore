@@ -30,3 +30,19 @@ go.work.sum
 # Editor/IDE
 # .idea/
 # .vscode/
+
+# Build output directory
+bin/
+
+# Showcase binaries (if built in their own directories)
+BettaFish/BettaFish
+gpt_researcher/gpt_researcher
+health_insights_agent/health_insights_agent
+health_insights_agent/health-insights-agent
+pepolehub/pepolehub
+deepagents/deepagents
+deerflow/deerflow
+langmanus/langmanus
+profile/profile
+ai-pdf-chatbot/backend/ai-pdf-chatbot
+ai-pdf-chatbot/backend/backend

@@ -44,7 +44,7 @@ func ParseFlags() *CLIConfig {
 
 // PrintHelp 打印帮助信息
 func PrintHelp() {
-	fmt.Println(`
+	fmt.Print(`
 健康洞察代理 - 血液报告AI分析工具
 
 用法:

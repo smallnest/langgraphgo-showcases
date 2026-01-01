@@ -3,7 +3,13 @@
     "allow": [
       "Bash(done)",
       "Bash(make help:*)",
-      "Bash(make list:*)"
+      "Bash(make list:*)",
+      "Bash(make fmt-check:*)",
+      "Bash(make tidy:*)",
+      "Bash(go vet:*)",
+      "Bash(make vet:*)",
+      "Bash(cat:*)",
+      "Bash(make check:*)"
     ],
     "deny": [],
     "ask": []

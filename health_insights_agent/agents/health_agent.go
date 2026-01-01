@@ -235,7 +235,7 @@ func (a *HealthAnalysisAgent) Analyze(ctx context.Context, reportText string) (m
 
 	if a.verbose {
 		fmt.Printf("\n⏱️  处理时间: %v\n", processingTime)
-		fmt.Println("=== 分析完成 ===\n")
+		fmt.Println("=== 分析完成 ===")
 	}
 
 	result["processing_time_ms"] = processingTime.Milliseconds()

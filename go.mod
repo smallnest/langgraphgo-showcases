@@ -4,8 +4,10 @@ go 1.25.3
 
 require (
 	github.com/gomarkdown/markdown v0.0.0-20250810172220-2e2c11897d1a
+	github.com/ledongthuc/pdf v0.0.0-20250511090121-5959a4027728
 	github.com/microcosm-cc/bluemonday v1.0.27
 	github.com/smallnest/langgraphgo v0.8.1
+	github.com/smallnest/langgraphgo/showcases/health_insights_agent v0.0.0-20260101044213-99a7149e5473
 	github.com/tmc/langchaingo v0.1.14
 )
 
@@ -26,7 +28,6 @@ require (
 	github.com/gorilla/css v1.0.1 // indirect
 	github.com/kataras/golog v0.1.15 // indirect
 	github.com/klauspost/compress v1.18.0 // indirect
-	github.com/ledongthuc/pdf v0.0.0-20220302134840-0c2507a12d80 // indirect
 	github.com/mattn/go-runewidth v0.0.19 // indirect
 	github.com/modelcontextprotocol/go-sdk v1.1.0 // indirect
 	github.com/olekukonko/tablewriter v0.0.5 // indirect

@@ -98,7 +98,7 @@ func runChatMode(ctx context.Context, vs *VectorStore, cfg Config) {
 
 	if stats.TotalDocuments == 0 {
 		fmt.Println("⚠️  Warning: No documents in store. Use --ingest to add documents first.")
-		fmt.Println("   Example: go run backend/*.go --ingest your-document.pdf --chat\n")
+		fmt.Print("   Example: go run backend/*.go --ingest your-document.pdf --chat\n")
 	}
 
 	reader := bufio.NewReader(os.Stdin)
