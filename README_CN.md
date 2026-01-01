@@ -1,5 +1,12 @@
 # LangGraph Go 示例集
 
+[![License](https://img.shields.io/:license-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![go.dev reference](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white&style=flat-square)](https://pkg.go.dev/github.com/smallnest/langgraphgo-showcases)
+[![GitHub Actions](https://github.com/smallnest/langgraphgo-showcases/actions/workflows/go.yaml/badge.svg)](https://github.com/smallnest/langgraphgo-showcases/actions)
+[![Go Report Card](https://goreportcard.com/badge/github.com/smallnest/langgraphgo-showcases)](https://goreportcard.com/report/github.com/smallnest/langgraphgo-showcases)
+[![Go Version](https://img.shields.io/github/go-mod/go-version/smallnest/langgraphgo-showcases)](https://github.com/smallnest/langgraphgo-showcases)
+[![Showcases](https://img.shields.io/badge/showcases-9-brightgreen)](https://github.com/smallnest/langgraphgo-showcases)
+
 基于 [LangGraph Go](https://github.com/smallnest/langgraphgo) 构建的 AI 智能体示例和演示项目集合。本仓库从 LangGraph Go 主项目的 showcases 目录中独立出来，提供了可直接运行的、生产级的 AI 智能体实现示例。
 
 ## 概述

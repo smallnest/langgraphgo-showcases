@@ -1,5 +1,12 @@
 # LangGraph Go Showcases
 
+[![License](https://img.shields.io/:license-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![go.dev reference](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white&style=flat-square)](https://pkg.go.dev/github.com/smallnest/langgraphgo-showcases)
+[![GitHub Actions](https://github.com/smallnest/langgraphgo-showcases/actions/workflows/go.yaml/badge.svg)](https://github.com/smallnest/langgraphgo-showcases/actions)
+[![Go Report Card](https://goreportcard.com/badge/github.com/smallnest/langgraphgo-showcases)](https://goreportcard.com/report/github.com/smallnest/langgraphgo-showcases)
+[![Go Version](https://img.shields.io/github/go-mod/go-version/smallnest/langgraphgo-showcases)](https://github.com/smallnest/langgraphgo-showcases)
+[![Showcases](https://img.shields.io/badge/showcases-9-brightgreen)](https://github.com/smallnest/langgraphgo-showcases)
+
 A collection of AI agent showcases and demonstrations built with [LangGraph Go](https://github.com/smallnest/langgraphgo). This repository was extracted from the showcases directory of the main LangGraph Go project to provide standalone, production-ready examples of AI agent implementations.
 
 ## Overview

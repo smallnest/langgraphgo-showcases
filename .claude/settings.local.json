@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(done)"
+      "Bash(done)",
+      "Bash(make help:*)",
+      "Bash(make list:*)"
     ],
     "deny": [],
     "ask": []
