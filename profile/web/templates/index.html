@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用户画像生成器</title>
+    <style>
+        body {
+            font-family: 'Georgia', serif;
+            background-color: #fbf8f3;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 800px;
+        }
+
+        .search-box {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        input[type="text"] {
+            padding: 10px 15px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            width: 300px;
+            font-family: 'Helvetica Neue', sans-serif;
+            outline: none;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+
+        input[type="text"]:focus {
+            border-color: orange;
+            box-shadow: 0 0 5px orange;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #333;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: 'Helvetica Neue', sans-serif;
+        }
+
+        button:hover {
+            background-color: #555;
+        }
+
+        .paper {
+            background-color: #fff;
+            padding: 60px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.19), 0 6px 6px rgba(0, 0, 0, 0.23);
+            position: relative;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        /* Paper texture effect (subtle) */
+        .paper::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.05'/%3E%3C/svg%3E");
+            pointer-events: none;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-align: center;
+            border-bottom: 2px solid #333;
+            padding-bottom: 20px;
+        }
+
+        .meta {
+            text-align: center;
+            color: #666;
+            font-style: italic;
+            margin-bottom: 40px;
+        }
+
+        .content {
+            font-size: 1.1em;
+            text-align: justify;
+        }
+
+        .social-links {
+            margin-top: 40px;
+            border-top: 1px solid #eee;
+            padding-top: 20px;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin-top: 20px;
+            font-family: sans-serif;
+            color: #666;
+        }
+
+        .logs {
+            display: none;
+            background-color: #1e1e1e;
+            color: #0f0;
+            font-family: 'Courier New', Courier, monospace;
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 4px;
+            max-height: 200px;
+            overflow-y: auto;
+            text-align: left;
+            font-size: 0.9em;
+            box-shadow: inset 0 0 10px #000;
+        }
+
+        input[type="text"].scanning {
+            background: linear-gradient(90deg, #fff, #e0e0e0, #fff);
+            background-size: 200% 100%;
+            animation: scan 1.5s infinite;
+            color: #888;
+        }
+
+        @keyframes scan {
+            0% {
+                background-position: 200% 0;
+            }
+
+            100% {
+                background-position: -200% 0;
+            }
+        }
+
+        .project-links {
+            margin-top: 20px;
+            font-size: 0.9em;
+            color: #666;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .project-links a {
+            color: #666;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: color 0.2s;
+        }
+
+        .project-links a:hover {
+            color: #333;
+        }
+
+        .project-links img {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+        }
+
+        .footer {
+            margin-top: 50px;
+            text-align: center;
+            font-size: 14px;
+            color: #999;
+            padding-bottom: 20px;
+        }
+
+        .footer a {
+            color: #666;
+            text-decoration: none;
+            font-weight: bold;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            transition: color 0.2s;
+        }
+
+        .footer a:hover {
+            color: #333;
+        }
+
+        .footer img {
+            height: 20px;
+        }
+
+        .help-icon {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            line-height: 20px;
+            text-align: center;
+            background-color: #666;
+            color: white;
+            border-radius: 50%;
+            font-size: 14px;
+            cursor: pointer;
+            margin-left: 8px;
+            vertical-align: middle;
+            transition: background-color 0.2s;
+        }
+
+        .help-icon:hover {
+            background-color: #333;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            position: relative;
+            max-width: 90%;
+            max-height: 90%;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-content img {
+            max-width: 100%;
+            max-height: 80vh;
+            display: block;
+            margin: 0 auto;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 28px;
+            font-weight: bold;
+            color: #666;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .modal-close:hover {
+            color: #333;
+        }
+
+        .modal-title {
+            text-align: center;
+            margin-bottom: 15px;
+            font-size: 18px;
+            color: #333;
+            font-family: 'Helvetica Neue', sans-serif;
+        }
+
+        .disclaimer {
+            margin-top: 30px;
+            padding: 15px;
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeeba;
+            border-radius: 4px;
+            font-size: 0.9em;
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="search-box">
+            <form method="POST">
+                <input type="text" name="username" placeholder="输入账号id(不是昵称!不是昵称!)..." value="{{.Username}}" required>
+                <button type="submit">生成画像</button>
+                <span class="help-icon" id="helpIcon" title="如何找到用户ID？">?</span>
+            </form>
+            <div id="loading" class="loading">正在分析社交足迹... 这可能需要一点时间(几分钟)。</div>
+
+            <div class="project-links">
+                <span>其他极客爆火产品：</span>
+                <a href="https://github.com/666ghj/BettaFish" target="_blank" title="微舆">
+                    <img src="https://github.com/666ghj.png" alt="BettaFish">
+                    微舆
+                </a>
+                <a href="https://github.com/sansan0/TrendRadar" target="_blank" title="TrendRadar">
+                    <img src="https://github.com/sansan0.png" alt="TrendRadar">
+                    TrendRadar
+                </a>
+            </div>
+            <div style="text-align: center; margin-top: 10px; font-size: 0.9em; color: #999;">
+                广告位招商，求服务器资源镜像服务, 以便支持更多的并发查询。联系方式 smallnest AT qq.com
+            </div>
+        </div>
+
+        <!-- Help Modal -->
+        <div id="helpModal" class="modal">
+            <div class="modal-content">
+                <span class="modal-close" id="modalClose">&times;</span>
+                <div class="modal-title">如何从微博找到用户ID（而不是昵称）</div>
+                <img src="/static/web/sample.png" alt="示例：如何找到用户ID">
+            </div>
+        </div>
+
+        <div id="logs" class="logs"></div>
+        <div id="result-container">
+            {{if .Profile}}
+            {{template "result" .}}
+            {{end}}
+        </div>
+
+        <div class="disclaimer">
+            ⚠️
+            <strong>免责声明</strong>：本工具仅供技术研究与学习使用，严禁用于非法监控或侵犯个人隐私。生成的信息均来自公开互联网数据，不对信息的真实性做任何保证，报告内容的任何指向性描述和负面描述完全和本站作者无关，使用者需要自行甄别，使用者需自行承担因使用本工具而产生的一切法律责任。更详细的免责声明请查看：<a
+                href="https://github.com/666ghj/BettaFish?tab=readme-ov-file#%EF%B8%8F-%E5%85%8D%E8%B4%A3%E5%A3%B0%E6%98%8E"
+                target="_blank">这里</a>
+        </div>
+
+        <div class="footer">
+            Built with <a href="https://lango.rpcx.io/" target="_blank">
+                <img src="https://lango.rpcx.io/images/logo/lango5.svg" alt="langgraphgo logo">
+                langgraphgo
+            </a>
+            <br>
+            Copyright © 2025 smallnest. All rights reserved.
+        </div>
+    </div>
+
+    <script>
+        document.querySelector('form').addEventListener('submit', function (e) {
+            e.preventDefault();
+
+            var form = this;
+            var btn = form.querySelector('button');
+            var input = form.querySelector('input');
+            var username = input.value;
+            var logsDiv = document.getElementById('logs');
+            var resultDiv = document.getElementById('result-container');
+            var loadingDiv = document.getElementById('loading');
+
+            // Reset UI
+            btn.disabled = true;
+            btn.innerText = '正在生成...';
+            input.readOnly = true;
+            input.classList.add('scanning');
+            loadingDiv.style.display = 'block';
+            logsDiv.innerHTML = '';
+            logsDiv.style.display = 'block';
+            resultDiv.innerHTML = '';
+
+            // Start SSE
+            var evtSource = new EventSource("/stream?username=" + encodeURIComponent(username));
+
+            evtSource.onmessage = function (e) {
+                var msg = document.createElement('div');
+                msg.textContent = "> " + e.data;
+                logsDiv.appendChild(msg);
+                logsDiv.scrollTop = logsDiv.scrollHeight;
+            };
+
+            evtSource.addEventListener("result", function (e) {
+                resultDiv.innerHTML = e.data;
+                evtSource.close();
+
+                // Restore UI
+                btn.disabled = false;
+                btn.innerText = '生成画像';
+                input.readOnly = false;
+                input.classList.remove('scanning');
+                loadingDiv.style.display = 'none';
+            });
+
+            evtSource.addEventListener("error", function (e) {
+                console.error("EventSource failed:", e);
+                var msg = document.createElement('div');
+                msg.style.color = 'red';
+                // 显示服务器发送的具体错误消息，如果没有则显示通用错误
+                msg.textContent = "> " + (e.data || "连接中断或发生错误");
+                logsDiv.appendChild(msg);
+                logsDiv.scrollTop = logsDiv.scrollHeight;
+                evtSource.close();
+
+                // Restore UI
+                btn.disabled = false;
+                btn.innerText = '生成画像';
+                input.readOnly = false;
+                input.classList.remove('scanning');
+                loadingDiv.style.display = 'none';
+            });
+        });
+
+        // Help Modal functionality
+        var helpIcon = document.getElementById('helpIcon');
+        var helpModal = document.getElementById('helpModal');
+        var modalClose = document.getElementById('modalClose');
+
+        helpIcon.addEventListener('click', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            helpModal.classList.add('show');
+        });
+
+        modalClose.addEventListener('click', function () {
+            helpModal.classList.remove('show');
+        });
+
+        // Close modal when clicking outside the content
+        helpModal.addEventListener('click', function (e) {
+            if (e.target === helpModal) {
+                helpModal.classList.remove('show');
+            }
+        });
+
+        // Close modal with Escape key
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && helpModal.classList.contains('show')) {
+                helpModal.classList.remove('show');
+            }
+        });
+    </script>
+</body>
+
+</html>
+
+{{define "result"}}
+<div class="paper">
+    <h1>用户: {{.Username}}</h1>
+    <div class="meta">机密画像报告</div>
+
+    <div class="content">
+        {{.ProfileHTML}}
+    </div>
+</div>
+{{end}}

@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI PDF Chatbot - LangGraphGo</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📄 AI PDF Chatbot</h1>
+            <p class="subtitle">Chat with your documents using LangGraphGo</p>
+        </header>
+
+        <main>
+            <!-- Upload Section -->
+            <section class="upload-section" id="uploadSection">
+                <div class="drop-zone" id="dropZone">
+                    <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="17 8 12 3 7 8"></polyline>
+                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                    </svg>
+                    <p>Drag & drop PDF files here or click to browse</p>
+                    <input type="file" id="fileInput" accept=".pdf,.txt,.md" multiple>
+                </div>
+                <div class="upload-info">
+                    <span id="docCount">0 documents loaded</span>
+                    <button id="clearBtn" class="btn btn-secondary" disabled>Clear All</button>
+                </div>
+            </section>
+
+            <!-- Chat Section -->
+            <section class="chat-section">
+                <div class="chat-header">
+                    <h2>💬 Chat</h2>
+                    <button id="newChatBtn" class="btn btn-small">New Chat</button>
+                </div>
+
+                <div class="chat-messages" id="chatMessages">
+                    <div class="welcome-message">
+                        <h3>Welcome! 👋</h3>
+                        <p>Upload a PDF document to get started, or ask me anything!</p>
+                        <ul class="example-questions">
+                            <li onclick="askQuestion('What can you help me with?')">What can you help me with?</li>
+                            <li onclick="askQuestion('How do I upload a document?')">How do I upload a document?</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="chat-input-container">
+                    <div class="sources-panel" id="sourcesPanel" style="display: none;">
+                        <div class="sources-header">
+                            <span>📚 Sources</span>
+                            <button class="close-btn" onclick="toggleSources()">×</button>
+                        </div>
+                        <div class="sources-list" id="sourcesList"></div>
+                    </div>
+
+                    <form class="chat-form" id="chatForm">
+                        <input
+                            type="text"
+                            id="chatInput"
+                            placeholder="Ask a question about your documents..."
+                            autocomplete="off"
+                        >
+                        <button type="submit" class="btn btn-primary" id="sendBtn">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <line x1="22" y1="2" x2="11" y2="13"></line>
+                                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                            </svg>
+                        </button>
+                    </form>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <p>Built with <a href="https://github.com/smallnest/langgraphgo">LangGraphGo</a> |
+            Based on <a href="https://github.com/mayooear/ai-pdf-chatbot-langchain">ai-pdf-chatbot-langchain</a></p>
+        </footer>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>

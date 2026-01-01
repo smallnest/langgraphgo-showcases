@@ -1,0 +1,631 @@
+# DeepAgents - 文件系统感知型 AI 智能体
+
+一个具有文件系统访问和任务管理能力的智能体 Go 实现，使用 [langgraphgo](https://github.com/smallnest/langgraphgo) 和 [langchaingo](https://github.com/tmc/langchaingo) 构建。
+
+DeepAgents 提供了一个强大的智能体框架，可以与文件系统交互、管理任务并将工作委托给子智能体，非常适合自动化、文件处理和复杂任务编排。
+
+## 概述
+
+DeepAgents 是一个能够：
+- **读写文件**：在配置的工作空间内完全访问文件系统
+- **管理任务**：内置待办事项列表管理
+- **委托工作**：生成子智能体处理复杂子任务
+- **搜索文件**：基于模式的文件查找，支持 glob
+- **自主执行**：使用 LLM 驱动的推理完成任务
+
+## 架构
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                       DeepAgents                            │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  ┌──────────────┐      ┌──────────────┐      ┌──────────┐ │
+│  │  文件系统    │      │   待办事项   │      │  子智能体│ │
+│  │    工具      │      │    管理器    │      │   系统   │ │
+│  └──────────────┘      └──────────────┘      └──────────┘ │
+│        │                      │                     │      │
+│        ▼                      ▼                     ▼      │
+│   • ls                   • write_todos          • task    │
+│   • read_file            • read_todos                     │
+│   • write_file                                            │
+│   • glob                                                  │
+│                                                             │
+│  ┌──────────────────────────────────────────────────────┐ │
+│  │           LangGraph 智能体（预构建）                 │ │
+│  │         LLM 驱动的推理和工具使用                     │ │
+│  └──────────────────────────────────────────────────────┘ │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+## 功能特性
+
+### 🗂️ 文件系统工具
+- **ls**：列出文件和目录及其大小信息
+- **read_file**：读取文件内容
+- **write_file**：创建或更新文件
+- **glob**：查找匹配模式的文件
+
+### ✅ 任务管理
+- **write_todos**：创建和更新待办事项列表
+- **read_todos**：检索当前任务
+- **线程安全**：使用互斥锁支持并发访问
+
+### 🤖 子智能体系统
+- **task**：将复杂任务委托给专业子智能体
+- **可配置处理器**：自定义子智能体逻辑
+- **分层任务分解**：分解复杂问题
+
+### 🔧 灵活配置
+- **自定义工作空间**：可配置根目录
+- **系统提示词**：定制智能体行为
+- **工具集成**：轻松扩展新工具
+
+## 前置要求
+
+- **Go**：版本 1.21 或更高
+- **API 密钥**：OpenAI 兼容的 API（OpenAI、DeepSeek 等）
+
+## 安装
+
+```bash
+# 导航到 deepagents 目录
+cd showcases/deepagents
+
+# 设置环境变量
+export OPENAI_API_KEY="your-api-key-here"
+
+# 可选：如果使用 DeepSeek 或其他提供商
+export OPENAI_API_BASE="https://api.deepseek.com/v1"
+
+# 运行示例
+go run main.go
+```
+
+## 使用方法
+
+### 基本示例
+
+```go
+package main
+
+import (
+    "context"
+    "log"
+
+    "github.com/smallnest/langgraphgo/showcases/deepagents/agent"
+    "github.com/tmc/langchaingo/llms"
+    "github.com/tmc/langchaingo/llms/openai"
+)
+
+func main() {
+    ctx := context.Background()
+
+    // 初始化 LLM
+    model, err := openai.New()
+    if err != nil {
+        log.Fatalf("创建 LLM 失败: %v", err)
+    }
+
+    // 创建 Deep Agent
+    deepAgent, err := agent.CreateDeepAgent(model,
+        agent.WithRootDir("./workspace"),
+        agent.WithSystemPrompt("你是一个具有文件系统访问能力的助手。"),
+    )
+    if err != nil {
+        log.Fatalf("创建智能体失败: %v", err)
+    }
+
+    // 运行智能体
+    inputs := map[string]any{
+        "messages": []llms.MessageContent{
+            llms.TextParts(llms.ChatMessageTypeHuman,
+                "创建一个名为 'hello.txt' 的文件，内容为 'Hello, DeepAgents!'，然后读取它。"),
+        },
+    }
+
+    result, err := deepAgent.Invoke(ctx, inputs)
+    if err != nil {
+        log.Fatalf("智能体执行失败: %v", err)
+    }
+
+    // 处理结果
+    // ...
+}
+```
+
+### 使用子智能体处理器
+
+```go
+// 定义自定义子智能体处理器
+subAgentHandler := func(ctx context.Context, task string) (string, error) {
+    log.Printf("[子智能体] 处理任务: %s", task)
+
+    // 实现自定义逻辑，生成另一个智能体等
+    // 例如，委托给专门的研究智能体
+
+    return "任务完成: " + task, nil
+}
+
+// 创建支持子智能体的智能体
+deepAgent, err := agent.CreateDeepAgent(model,
+    agent.WithRootDir("./workspace"),
+    agent.WithSubAgentHandler(subAgentHandler),
+)
+```
+
+## 配置选项
+
+### CreateDeepAgent 选项
+
+```go
+type DeepAgentOptions struct {
+    RootDir         string              // 工作空间根目录
+    SystemPrompt    string              // 智能体系统提示词
+    SubAgentHandler SubAgentHandler     // 委托任务的处理器
+}
+```
+
+**可用选项**：
+- `WithRootDir(path string)`：设置工作空间目录（默认："."）
+- `WithSystemPrompt(prompt string)`：自定义智能体行为（默认："You are a helpful deep agent."）
+- `WithSubAgentHandler(handler func)`：启用任务委托给子智能体
+
+### 环境变量
+
+| 变量 | 描述 | 默认值 | 必需 |
+|------|------|--------|------|
+| `OPENAI_API_KEY` | OpenAI API 密钥 | 无 | ✅ 是 |
+| `OPENAI_API_BASE` | API 基础 URL | OpenAI 默认值 | ❌ 否 |
+
+## 工具参考
+
+### 文件系统工具
+
+#### ls
+**描述**：列出目录中的文件
+**输入**：目录路径（相对于根目录）
+**输出**：格式化列表，包含类型（D/F）、名称和大小
+
+```
+D subdir 0
+F file.txt 1234
+```
+
+#### read_file
+**描述**：读取文件内容
+**输入**：文件路径（相对于根目录）
+**输出**：文件内容字符串
+
+#### write_file
+**描述**：写入文件
+**输入**：路径和内容，用换行符分隔
+```
+filename.txt
+文件内容在这里
+```
+**输出**：成功确认
+
+#### glob
+**描述**：查找匹配模式的文件
+**输入**：Glob 模式（例如 `*.txt`、`**/*.go`）
+**输出**：换行符分隔的匹配文件列表
+
+### 任务管理工具
+
+#### write_todos
+**描述**：创建或更新待办事项列表
+**输入**：换行符分隔的任务列表
+```
+任务 1
+任务 2
+任务 3
+```
+**输出**：成功确认
+
+#### read_todos
+**描述**：读取当前待办事项列表
+**输入**：空（未使用）
+**输出**：换行符分隔的待办事项列表
+
+### 子智能体工具
+
+#### task
+**描述**：将任务委托给子智能体
+**输入**：任务描述
+**输出**：子智能体处理器的结果
+
+**示例用例**：
+- 为复杂查询生成专门的研究智能体
+- 将文件处理委托给批处理器
+- 创建分层任务工作流
+
+## 项目结构
+
+```
+deepagents/
+├── main.go                 # 示例应用程序
+├── agent/
+│   └── agent.go           # 智能体创建和配置
+└── tools/
+    ├── filesystem.go      # 文件操作（ls、read、write、glob）
+    ├── todo.go            # 任务管理（write_todos、read_todos）
+    └── subagent.go        # 子智能体委托（task）
+```
+
+## 工作原理
+
+### 1. 智能体初始化
+
+```go
+// CreateDeepAgent 函数：
+// 1. 如需要，创建工作空间目录
+// 2. 初始化 TodoManager
+// 3. 使用配置选项创建所有工具
+// 4. 使用 prebuilt.CreateAgent 构建智能体
+```
+
+### 2. 工具注册
+
+所有工具实现 `Tool` 接口：
+```go
+type Tool interface {
+    Name() string
+    Description() string
+    Call(ctx context.Context, input string) (string, error)
+}
+```
+
+工具注册到智能体并暴露给 LLM 进行函数调用。
+
+### 3. 智能体执行
+
+智能体使用 LangGraph 的预构建智能体模式：
+1. **接收消息**：用户提供自然语言指令
+2. **推理**：LLM 决定使用哪些工具
+3. **行动**：执行工具调用
+4. **循环**：继续直到任务完成
+5. **响应**：返回最终结果
+
+### 4. 子智能体委托
+
+当智能体遇到复杂任务时：
+1. 智能体使用任务描述调用 `task` 工具
+2. SubAgentHandler 接收任务
+3. 处理器可以生成新智能体、进行 API 调用等
+4. 结果返回给主智能体
+5. 主智能体继续处理结果
+
+## 示例用例
+
+### 1. 文件组织
+
+```go
+inputs := map[string]any{
+    "messages": []llms.MessageContent{
+        llms.TextParts(llms.ChatMessageTypeHuman,
+            "将所有 .txt 文件组织到 'docs' 目录中"),
+    },
+}
+```
+
+**智能体操作**：
+1. 使用 `glob` 查找所有 .txt 文件
+2. 创建 docs 目录
+3. 使用 `read_file` 和 `write_file` 移动文件
+4. 确认完成
+
+### 2. 任务管理
+
+```go
+inputs := map[string]any{
+    "messages": []llms.MessageContent{
+        llms.TextParts(llms.ChatMessageTypeHuman,
+            "为设置新 Go 项目创建待办事项列表"),
+    },
+}
+```
+
+**智能体操作**：
+1. 生成待办事项列表
+2. 使用 `write_todos` 保存任务
+3. 稍后可以使用 `read_todos` 跟踪进度
+
+### 3. 批量处理
+
+```go
+subAgentHandler := func(ctx context.Context, task string) (string, error) {
+    // 处理单个文件
+    return processFile(task)
+}
+
+inputs := map[string]any{
+    "messages": []llms.MessageContent{
+        llms.TextParts(llms.ChatMessageTypeHuman,
+            "处理 data 目录中的所有 JSON 文件"),
+    },
+}
+```
+
+**智能体操作**：
+1. 使用 `glob` 查找 JSON 文件
+2. 通过 `task` 工具将每个文件委托给子智能体
+3. 汇总结果
+
+### 4. 代码生成
+
+```go
+inputs := map[string]any{
+    "messages": []llms.MessageContent{
+        llms.TextParts(llms.ChatMessageTypeHuman,
+            "在 server.go 中创建一个简单的 Go HTTP 服务器"),
+    },
+}
+```
+
+**智能体操作**：
+1. 生成代码内容
+2. 使用 `write_file` 创建 server.go
+3. 确认创建
+
+## 最佳实践
+
+### 1. 工作空间隔离
+
+✅ **好的**：
+```go
+agent.WithRootDir("./workspace")  // 隔离的工作空间
+```
+
+❌ **避免**：
+```go
+agent.WithRootDir("/")  // 系统范围访问（安全风险）
+```
+
+### 2. 清晰的系统提示词
+
+✅ **好的**：
+```go
+agent.WithSystemPrompt("你是文件组织者。需要时创建目录并系统地移动文件。")
+```
+
+❌ **太模糊**：
+```go
+agent.WithSystemPrompt("你很有帮助。")
+```
+
+### 3. 结构化的子智能体处理器
+
+```go
+subAgentHandler := func(ctx context.Context, task string) (string, error) {
+    // 解析任务
+    taskType, params := parseTask(task)
+
+    // 路由到专门的处理器
+    switch taskType {
+    case "research":
+        return researchAgent.Handle(ctx, params)
+    case "analyze":
+        return analysisAgent.Handle(ctx, params)
+    default:
+        return "", fmt.Errorf("未知任务类型: %s", taskType)
+    }
+}
+```
+
+### 4. 错误处理
+
+```go
+result, err := deepAgent.Invoke(ctx, inputs)
+if err != nil {
+    log.Printf("智能体失败: %v", err)
+    // 实现重试逻辑或回退
+}
+```
+
+## 高级用法
+
+### 自定义工具集成
+
+通过实现 `Tool` 接口添加新工具：
+
+```go
+type CustomTool struct {
+    // 配置
+}
+
+func (t *CustomTool) Name() string {
+    return "custom_tool"
+}
+
+func (t *CustomTool) Description() string {
+    return "为 LLM 提供的描述"
+}
+
+func (t *CustomTool) Call(ctx context.Context, input string) (string, error) {
+    // 实现
+    return result, nil
+}
+```
+
+然后注册到智能体：
+```go
+agentTools := []ltools.Tool{
+    // ... 现有工具
+    &CustomTool{},
+}
+
+agent, err := prebuilt.CreateAgent(model, agentTools, ...)
+```
+
+### 分层智能体系统
+
+```go
+// 创建专门的智能体
+researchAgent := createResearchAgent(model)
+analysisAgent := createAnalysisAgent(model)
+
+// 主智能体委托给专门的智能体
+mainHandler := func(ctx context.Context, task string) (string, error) {
+    if strings.Contains(task, "research") {
+        return researchAgent.Invoke(ctx, taskInputs)
+    }
+    if strings.Contains(task, "analyze") {
+        return analysisAgent.Invoke(ctx, taskInputs)
+    }
+    return "", fmt.Errorf("未知任务类型")
+}
+
+mainAgent := agent.CreateDeepAgent(model,
+    agent.WithSubAgentHandler(mainHandler),
+)
+```
+
+### 持久化待办事项管理
+
+```go
+// 将待办事项保存到文件
+todoManager := tools.NewTodoManager()
+
+// 启动时从文件加载
+if data, err := os.ReadFile("todos.txt"); err == nil {
+    // 从文件初始化
+}
+
+// 更新后保存到文件
+// （在 WriteTodosTool.Call 中实现）
+```
+
+## 故障排除
+
+### API 密钥未设置
+
+```
+OPENAI_API_KEY not set, skipping example execution
+```
+
+**解决方案**：
+```bash
+export OPENAI_API_KEY="sk-..."
+```
+
+### 权限被拒绝
+
+如果文件系统操作失败：
+- 检查工作空间目录权限
+- 确保根目录存在且可写
+- 验证用户有访问工作空间的权限
+
+### 工具调用失败
+
+如果工具未被正确调用：
+- 检查工具描述是否清晰
+- 验证 LLM 模型支持函数调用
+- 审查系统提示词的清晰度
+- 启用详细日志记录以查看 LLM 推理
+
+### 子智能体未被调用
+
+如果任务委托不起作用：
+- 验证 SubAgentHandler 已配置
+- 检查任务描述是否具体
+- 确保处理器不是 nil
+- 审查处理器的错误日志
+
+## 性能考虑
+
+### 文件系统操作
+
+- **读取文件**：对于小文件（<1MB）很快
+- **写入文件**：原子操作，并发访问安全
+- **Glob**：性能取决于目录大小
+- **Ls**：对于合理大小的目录很高效
+
+### LLM 调用
+
+每次智能体调用可能涉及：
+- 1-5 次 LLM 调用（取决于任务复杂性）
+- 工具调用按顺序执行
+- 考虑对简单任务使用更快的模型（gpt-3.5-turbo）
+
+### 优化技巧
+
+1. **使用具体提示词**：减少推理迭代
+2. **批量操作**：可能时分组文件操作
+3. **缓存结果**：在 SubAgentHandler 中实现缓存
+4. **限制工具集**：仅包含必要的工具
+
+## 安全考虑
+
+### 工作空间隔离
+
+始终使用专用的工作空间目录：
+```go
+agent.WithRootDir("./safe_workspace")
+```
+
+### 输入验证
+
+智能体执行 LLM 生成的工具调用。为增强安全性：
+- 使用受限的工作空间
+- 实现工具输入验证
+- 执行前审查生成的代码
+- 监控文件系统操作
+
+### API 密钥保护
+
+```bash
+# 使用环境变量
+export OPENAI_API_KEY="..."
+
+# 不要在源代码中硬编码
+# ❌ apiKey := "sk-..."
+```
+
+## 未来增强
+
+计划功能：
+- [ ] 文件监视和事件驱动执行
+- [ ] 数据库集成工具
+- [ ] HTTP 请求工具
+- [ ] Git 操作支持
+- [ ] 归档/压缩工具
+- [ ] 图像处理工具
+- [ ] 持久化状态管理
+- [ ] 多智能体协作
+- [ ] 工作流模板
+
+## 许可证
+
+MIT License - 与父项目 langgraphgo 相同
+
+## 参考资料
+
+- [LangGraph Go](https://github.com/smallnest/langgraphgo) - 基于图的智能体框架
+- [LangChain Go](https://github.com/tmc/langchaingo) - LLM 集成库
+- [OpenAI Function Calling](https://platform.openai.com/docs/guides/function-calling) - 工具使用文档
+
+## 贡献
+
+欢迎贡献！改进领域：
+- 额外的文件系统工具
+- 增强的错误处理
+- 工具输入验证
+- 性能优化
+- 文档改进
+- 示例应用程序
+
+## 支持
+
+对于问题和疑问：
+- 查看本 README
+- 检查 main.go 中的示例
+- 在 langgraphgo GitHub 仓库上开启 issue
+
+---
+
+**构建工具**：
+- [langgraphgo](https://github.com/smallnest/langgraphgo) - 智能体编排
+- [langchaingo](https://github.com/tmc/langchaingo) - LLM 集成
+- 标准 Go 库用于文件系统操作

@@ -1,0 +1,123 @@
+# LangGraphGo User Guide
+
+## Introduction
+
+LangGraphGo is a Go implementation of LangChain's LangGraph framework for building stateful, multi-agent applications with LLMs. It uses a directed graph structure where nodes are processing units and edges define execution flow.
+
+## Core Concepts
+
+### StateGraph
+
+The StateGraph is the core abstraction for building workflows. It maintains state that flows through and evolves at each node.
+
+Key features:
+- Type-safe state management using Go generics
+- Conditional routing based on state
+- Parallel execution with automatic state merging
+- Checkpointing for persistence
+
+### Nodes
+
+Nodes are the basic processing units in a graph. Each node:
+- Has a unique name and description
+- Receives the current state as input
+- Returns updated state
+- Can perform arbitrary Go code
+
+### Edges
+
+Edges define the flow of execution:
+- Static edges: Always route to the same node
+- Conditional edges: Route based on state evaluation
+
+## Building Your First Graph
+
+Here's a simple example:
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "github.com/smallnest/langgraphgo/graph"
+)
+
+type MyState struct {
+    Count int
+    Name  string
+}
+
+func main() {
+    g := graph.NewStateGraph[MyState]()
+
+    // Add nodes
+    g.AddNode("increment", "Increment counter",
+        func(ctx context.Context, state MyState) (MyState, error) {
+            state.Count++
+            return state, nil
+        })
+
+    // Configure edges
+    g.SetEntryPoint("increment")
+    g.AddEdge("increment", graph.END)
+
+    // Compile and run
+    runnable, _ := g.Compile()
+    result, _ := runnable.Invoke(context.Background(), MyState{Count: 0})
+    fmt.Println(result.Count) // Output: 1
+}
+```
+
+## Advanced Features
+
+### Checkpointing
+
+Save and resume graph execution:
+
+```go
+import "github.com/smallnest/langgraphgo/store"
+
+checkpointSaver := store.NewMemoryCheckpointSaver()
+runnable.SetCheckpointSaver(checkpointSaver)
+```
+
+### Streaming
+
+Get real-time updates:
+
+```go
+for event := range runnable.Stream(ctx, state) {
+    fmt.Printf("Node: %s, State: %v\n", event.Node, event.State)
+}
+```
+
+### Human-in-the-Loop
+
+Pause execution for human input:
+
+```go
+g.InterruptBefore("critical_node")
+```
+
+## Best Practices
+
+1. **Design your state carefully** - Keep it simple but expressive
+2. **Use descriptive names** - Help with debugging and visualization
+3. **Handle errors properly** - Each node can return errors
+4. **Test incrementally** - Build and test nodes independently
+5. **Monitor execution** - Use listeners and tracing
+
+## Common Use Cases
+
+1. **Multi-agent systems** - Coordinate multiple AI agents
+2. **Document processing** - ETL pipelines with LLM enhancement
+3. **Customer service** - Complex conversational flows
+4. **Research assistants** - Multi-step reasoning workflows
+5. **Code generation** - Stepwise development with validation
+
+## Conclusion
+
+LangGraphGo provides a powerful, type-safe way to build sophisticated AI applications. By leveraging Go's performance and concurrency features, you can build production-ready systems that scale.
+
+For more information, visit https://github.com/smallnest/langgraphgo

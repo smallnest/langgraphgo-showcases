@@ -1,0 +1,598 @@
+:root {
+    --bg-color: #f7f5f0;
+    /* Claude.ai-like warm/micro-yellow background */
+    --sidebar-bg: #f7f5f0;
+    /* Match sidebar to main background */
+    --card-bg: #ffffff;
+    --text-primary: #333333;
+    /* Slightly darker for better contrast on warm bg */
+    --text-secondary: #666666;
+    --accent-color: #d97757;
+    /* Let's try a warm accent like Claude's sometimes has */
+    --accent-hover: #c56245;
+    --border-color: #e6e4dd;
+    /* Warm border */
+    --input-bg: #ffffff;
+    /* White input on warm bg */
+    --success-color: #27ae60;
+    --font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    --paper-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
+    /* Stronger gray shadow for paper effect */
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: var(--font-family);
+    background-color: var(--bg-color);
+    color: var(--text-primary);
+    height: 100vh;
+    overflow: hidden;
+}
+
+.app-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.app-header {
+    height: 60px;
+    background-color: var(--sidebar-bg);
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+}
+
+.logo {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    /* Reduced gap slightly */
+    font-weight: 600;
+    font-size: 18px;
+    color: var(--text-primary);
+}
+
+.logo svg {
+    color: var(--accent-color);
+    align-self: center;
+    /* Keep icon centered vertically */
+    position: relative;
+    top: 2px;
+    /* Visual adjustment */
+}
+
+.powered-by {
+    font-size: 12px;
+    color: var(--text-secondary);
+    font-weight: 400;
+    position: relative;
+    top: 3px;
+}
+
+.icon-btn {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 6px;
+    transition: all 0.2s;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.icon-btn:hover {
+    background-color: var(--border-color);
+    color: var(--text-primary);
+}
+
+.app-main {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+.chat-container {
+    width: 40%;
+    min-width: 40%;
+    max-width: 40%;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid var(--border-color);
+}
+
+.messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.message {
+    display: flex;
+    gap: 16px;
+    max-width: 80%;
+}
+
+.message.user {
+    align-self: flex-end;
+    flex-direction: row-reverse;
+}
+
+.message .avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background-color: var(--card-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    border: 1px solid var(--border-color);
+}
+
+.message.user .avatar {
+    background-color: var(--accent-color);
+    color: #fff;
+    border: none;
+}
+
+.message .content {
+    background-color: var(--card-bg);
+    padding: 12px 16px;
+    border-radius: 12px;
+    line-height: 1.5;
+    border: 1px solid var(--border-color);
+}
+
+.message.user .content {
+    background-color: var(--accent-color);
+    color: #fff;
+    border: none;
+}
+
+.input-area {
+    padding: 24px;
+    background-color: var(--bg-color);
+    border-top: 1px solid var(--border-color);
+}
+
+.input-wrapper {
+    background-color: var(--input-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 8px 16px;
+    display: flex;
+    align-items: flex-end;
+    gap: 12px;
+    transition: border-color 0.2s;
+}
+
+.input-wrapper:focus-within {
+    border-color: var(--accent-color);
+}
+
+textarea {
+    flex: 1;
+    background: none;
+    border: none;
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 15px;
+    resize: none;
+    padding: 8px 0;
+    max-height: 120px;
+    outline: none;
+}
+
+#sendBtn {
+    background-color: var(--accent-color);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+#sendBtn:disabled {
+    background-color: var(--border-color);
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+#sendBtn:not(:disabled):hover {
+    background-color: var(--accent-hover);
+}
+
+.report-panel {
+    flex: 1;
+    background-color: var(--bg-color);
+    /* Use main bg color for panel container */
+    display: flex;
+    flex-direction: column;
+}
+
+.panel-header {
+    padding: 0 24px;
+    height: 60px;
+    background-color: var(--bg-color);
+    /* Match main bg */
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.tabs {
+    display: flex;
+    gap: 24px;
+    height: 100%;
+}
+
+.tab-btn {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    height: 100%;
+    position: relative;
+    padding: 0 4px;
+    transition: color 0.2s;
+}
+
+.tab-btn:hover {
+    color: var(--text-primary);
+}
+
+.tab-btn.active {
+    color: var(--text-primary);
+}
+
+.tab-btn.active::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background-color: var(--accent-color);
+}
+
+.panel-content {
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+}
+
+.tab-content {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow-y: auto;
+    padding: 32px;
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+.report-content {
+    /* Styles moved to generic tab content or specific report content */
+}
+
+/* Specific styles for logs */
+.logs-container {
+    font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+    font-size: 13px;
+    color: var(--text-secondary);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.log-entry {
+    line-height: 2.0;
+    white-space: pre-wrap;
+    border-bottom: 1px solid rgba(48, 54, 61, 0.5);
+    padding-bottom: 8px;
+}
+
+.log-entry:last-child {
+    border-bottom: none;
+}
+
+.status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.status-indicator .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: var(--text-secondary);
+}
+
+.status-indicator.active .dot {
+    background-color: var(--success-color);
+    box-shadow: 0 0 8px rgba(35, 134, 54, 0.4);
+    animation: pulse 2s infinite;
+}
+
+.status-indicator.active .text {
+    color: var(--success-color);
+}
+
+@keyframes pulse {
+    0% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.5;
+    }
+
+    100% {
+        opacity: 1;
+    }
+}
+
+
+
+
+/* Modal Styles */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+}
+
+.modal-overlay.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.modal {
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    width: 500px;
+    max-width: 90%;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+.modal-header {
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.modal-header h3 {
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 24px;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+}
+
+.close-btn:hover {
+    color: var(--text-primary);
+}
+
+.modal-content {
+    padding: 16px;
+    overflow-y: auto;
+    flex: 1;
+    /* Ensure content takes available space and scrolls */
+    min-height: 0;
+    /* Prevent flex overflow issues */
+}
+
+.history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.history-item {
+    padding: 12px;
+    border-radius: 8px;
+    background-color: var(--input-bg);
+    border: 1px solid var(--border-color);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.history-item:hover {
+    border-color: var(--accent-color);
+    background-color: rgba(88, 166, 255, 0.1);
+}
+
+.history-query {
+    font-weight: 500;
+    margin-bottom: 4px;
+    color: var(--text-primary);
+}
+
+.history-date {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+/* Markdown Report Styles */
+.report-content {
+    font-size: 18px;
+    /* Increased base font size */
+    line-height: 1.5;
+    /* Increased line height for better readability */
+    color: var(--text-primary);
+    max-width: 850px;
+    /* Wider paper */
+    margin: 40px auto;
+    padding: 60px 60px;
+    /* Further reduced padding */
+    background-color: #ffffff;
+    box-shadow: var(--paper-shadow);
+    border-radius: 2px;
+    min-height: 1000px;
+    border: 1px solid rgba(0, 0, 0, 0.02);
+}
+
+.report-content h1 {
+    font-size: 2.8em;
+    /* Much larger title */
+    font-weight: 800;
+    /* Heavier weight */
+    margin-top: 0;
+    margin-bottom: 40px;
+    /* Increased margin */
+    padding-bottom: 40px;
+    /* Increased padding */
+    border-bottom: 3px solid var(--text-primary);
+    /* Stronger border */
+    color: var(--text-primary);
+    line-height: 1.5;
+    letter-spacing: -0.02em;
+    /* Tighter tracking for large headings */
+}
+
+.report-content h2 {
+    font-size: 2.0em;
+    /* Larger section headings */
+    font-weight: 700;
+    margin-top: 30px;
+    /* More breathing room above */
+    margin-bottom: 30px;
+    /* Increased margin */
+    color: var(--text-primary);
+    line-height: 1.5;
+    letter-spacing: -0.01em;
+}
+
+.report-content h3 {
+    font-size: 1.5em;
+    font-weight: 600;
+    margin-top: 20px;
+    /* Increased margin */
+    margin-bottom: 20px;
+    /* Increased margin */
+    color: var(--text-primary);
+    line-height: 1.2;
+}
+
+.report-content p {
+    margin-bottom: 5px;
+    color: var(--text-primary);
+    /* Darker text for better readability with larger font */
+    font-weight: 400;
+}
+
+.report-content ul,
+.report-content ol {
+    margin-bottom: 24px;
+    padding-left: 28px;
+    color: var(--text-secondary);
+}
+
+.report-content li {
+    margin-bottom: 12px;
+    /* Reduced from 16px */
+}
+
+.report-content li>ul,
+.report-content li>ol {
+    margin-top: 4px;
+    margin-bottom: 4px;
+}
+
+.report-content li li {
+    margin-bottom: 4px;
+    /* Tighter for nested items */
+}
+
+.placeholder-text {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
+/* Markdown Styles */
+.report-content pre {
+    background-color: #f6f8fa;
+    /* Light code block bg */
+    padding: 16px;
+    border-radius: 6px;
+    overflow-x: auto;
+    margin-bottom: 24px;
+    border: 1px solid var(--border-color);
+}
+
+.report-content code {
+    font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    background-color: rgba(27, 31, 35, 0.05);
+    /* Light inline code bg */
+    padding: 0.2em 0.4em;
+    border-radius: 3px;
+}
+
+.report-content blockquote {
+    border-left: 4px solid var(--accent-color);
+    padding: 16px 24px;
+    margin: 24px 0;
+    background-color: #f8f9fa;
+    /* Light quote bg */
+    color: var(--text-secondary);
+    font-style: italic;
+    border-radius: 0 4px 4px 0;
+}

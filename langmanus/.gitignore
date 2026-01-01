@@ -1,0 +1,29 @@
+# Binaries
+langmanus
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Environment
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test outputs
+*.test
+*.out
+
+# Temporary files
+*.tmp
+tmp/

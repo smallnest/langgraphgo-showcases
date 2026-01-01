@@ -1,0 +1,35 @@
+# Binaries
+health-insights-agent
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Test binary
+*.test
+
+# Output files
+*.out
+*.json
+
+# Vendor
+vendor/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env files with secrets
+.env
+.env.local
+
+# Build artifacts
+dist/
+build/
