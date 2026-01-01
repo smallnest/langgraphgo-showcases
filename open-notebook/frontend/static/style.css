@@ -1190,14 +1190,40 @@ body {
 }
 
 .transform-card.loading {
-    background: var(--paper-dark);
+    background: #e8f0f3;
     cursor: not-allowed;
-    opacity: 0.8;
-    border-color: var(--accent-blue);
+    opacity: 1;
+    border: 2px solid var(--accent-primary);
+    box-shadow: 0 0 0 3px var(--accent-glow), var(--shadow-md);
 }
 
 .transform-card.loading .transform-icon {
-    animation: pulse 1s infinite;
+    animation: pulse-icon 1.5s ease-in-out infinite;
+}
+
+.transform-card.loading .transform-icon svg {
+    color: var(--accent-primary);
+}
+
+.transform-card.loading .hourglass-icon {
+    animation: spin 3s linear infinite;
+    color: var(--accent-primary);
+}
+
+.transform-card.loading .transform-name {
+    color: var(--accent-primary);
+    font-weight: 700;
+}
+
+@keyframes pulse-icon {
+    0%, 100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(1.1);
+        opacity: 0.8;
+    }
 }
 
 @keyframes pulse {
@@ -1275,18 +1301,21 @@ body {
 /* Footer */
 .app-footer {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    justify-content: space-between;
+    justify-content: center;
     padding: var(--space-md) var(--space-xl);
     background: rgba(255, 255, 255, 0.9);
     backdrop-filter: blur(10px);
     border-top: 1px solid var(--border-color);
     flex-shrink: 0;
+    gap: var(--space-xs);
 }
 
 .footer-info {
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: var(--space-md);
 }
 
@@ -1308,8 +1337,9 @@ body {
 
 .footer-credit {
     font-family: var(--font-mono);
-    font-size: 0.65rem;
-    color: var(--text-muted);
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-secondary);
 }
 
 .footer-credit a {

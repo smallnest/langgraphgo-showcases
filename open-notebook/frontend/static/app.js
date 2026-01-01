@@ -117,6 +117,11 @@ class OpenNotebook {
             throw new Error(error.error || 'Request failed');
         }
 
+        // Handle 204 No Content responses
+        if (response.status === 204) {
+            return null;
+        }
+
         return response.json();
     }
 
@@ -177,7 +182,8 @@ class OpenNotebook {
                 }
             });
 
-            item.querySelector('.btn-delete-notebook').addEventListener('click', () => {
+            item.querySelector('.btn-delete-notebook').addEventListener('click', (e) => {
+                e.stopPropagation();
                 if (confirm('Delete this notebook?')) {
                     this.deleteNotebook(nb.id);
                 }
@@ -263,22 +269,63 @@ class OpenNotebook {
 
             if (this.currentNotebook?.id === id) {
                 this.currentNotebook = null;
-                if (this.notebooks.length > 0) {
-                    this.selectNotebook(this.notebooks[0].id);
-                } else {
-                    // No notebooks left, clear the content area
-                    document.getElementById('sourcesGrid').innerHTML = '';
-                    document.getElementById('notesList').innerHTML = '';
-                    document.getElementById('chatSessions').innerHTML = '';
-                }
+                // Clear content areas
+                this.clearContentAreas();
             }
 
             this.renderNotebooks();
+            this.updateFooter();
             console.log('Notebooks after delete:', this.notebooks.length);
         } catch (error) {
             console.error('Delete error:', error);
             this.showError('Failed to delete notebook: ' + error.message);
         }
+    }
+
+    clearContentAreas() {
+        // Clear sources
+        const sourcesContainer = document.getElementById('sourcesGrid');
+        sourcesContainer.innerHTML = `
+            <div class="empty-state">
+                <svg width="64" height="64" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1">
+                    <path d="M20 8 L44 8 L48 12 L48 56 L20 56 Z"/>
+                    <polyline points="44,8 44,12 48,12"/>
+                    <line x1="28" y1="24" x2="40" y2="24"/>
+                    <line x1="28" y1="32" x2="40" y2="32"/>
+                    <line x1="28" y1="40" x2="36" y2="40"/>
+                </svg>
+                <p>Add sources to begin</p>
+                <p class="empty-hint">PDF, TXT, MD, DOCX, HTML supported</p>
+            </div>
+        `;
+
+        // Clear notes
+        const notesContainer = document.getElementById('notesList');
+        notesContainer.innerHTML = `
+            <div class="empty-state">
+                <svg width="48" height="48" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M12 4 L36 4 L40 8 L40 44 L12 44 Z"/>
+                    <polyline points="36,4 36,8 40,8"/>
+                </svg>
+                <p>No notes generated</p>
+                <p class="empty-hint">Use transformations to create notes from sources</p>
+            </div>
+        `;
+
+        // Clear chat
+        const chatContainer = document.getElementById('chatMessages');
+        chatContainer.innerHTML = `
+            <div class="chat-welcome">
+                <svg width="40" height="40" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <circle cx="20" cy="12" r="6"/>
+                    <path d="M8 38 C8 28 14 22 20 22 C26 22 32 28 32 38"/>
+                </svg>
+                <h3>Chat with your sources</h3>
+                <p>Ask questions about the content in your notebook</p>
+            </div>
+        `;
+
+        this.currentChatSession = null;
     }
 
     // Source Methods
@@ -613,18 +660,26 @@ class OpenNotebook {
 
         // Visual feedback on button
         let originalContent = '';
+        let originalIcon = '';
         if (element) {
-            originalContent = element.innerHTML;
-            element.classList.add('loading');
-            element.disabled = true;
             if (element.classList.contains('transform-card')) {
+                originalContent = element.innerHTML;
+                originalIcon = element.querySelector('.transform-icon').innerHTML;
+                element.classList.add('loading');
+                element.disabled = true;
+                element.querySelector('.transform-icon').innerHTML = `
+                    <svg class="hourglass-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M5 22h14"/>
+                        <path d="M5 2h14"/>
+                        <path d="M17 22v-4.172a2 2 0 0 0-.586-1.414L12 12l4.414-4.414A2 2 0 0 0 17 6.172V2"/>
+                        <path d="M7 22v-4.172a2 2 0 0 1 .586-1.414L12 12l-4.414-4.414A2 2 0 0 1 7 6.172V2"/>
+                    </svg>
+                `;
                 element.querySelector('.transform-name').textContent = 'Generating...';
             } else {
                 element.textContent = 'Generating...';
             }
         }
-
-        this.showLoading(`Generating ${type}...`);
 
         try {
             const result = await this.api(`/notebooks/${this.currentNotebook.id}/transform`, {
@@ -638,22 +693,23 @@ class OpenNotebook {
                 }),
             });
 
-            this.hideLoading();
-            if (element) {
+            if (element && element.classList.contains('transform-card')) {
                 element.classList.remove('loading');
                 element.disabled = false;
-                element.innerHTML = originalContent;
+                element.querySelector('.transform-icon').innerHTML = originalIcon;
+                element.querySelector('.transform-name').textContent = element.querySelector('.transform-name').textContent.replace('Generating...', '');
             }
+
             await this.loadNotes();
             this.switchTab('notes');
             document.getElementById('customPrompt').value = '';
             this.setStatus(`Generated ${type}`);
         } catch (error) {
-            this.hideLoading();
-            if (element) {
+            if (element && element.classList.contains('transform-card')) {
                 element.classList.remove('loading');
                 element.disabled = false;
-                element.innerHTML = originalContent;
+                element.querySelector('.transform-icon').innerHTML = originalIcon;
+                element.querySelector('.transform-name').textContent = element.querySelector('.transform-name').textContent.replace('Generating...', '');
             }
             this.showError(error.message);
         }
