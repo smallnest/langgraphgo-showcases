@@ -434,6 +434,8 @@ class OpenNotebook {
         this.hideLoading();
         this.closeModals();
         await this.loadSources();
+        // Update notebook card counts in left panel
+        await this.updateCurrentNotebookCounts();
         document.getElementById('fileInput').value = '';
     }
 
@@ -458,6 +460,8 @@ class OpenNotebook {
             this.closeModals();
             form.reset();
             await this.loadSources();
+            // Update notebook card counts in left panel
+            await this.updateCurrentNotebookCounts();
         } catch (error) {
             this.hideLoading();
             this.showError(error.message);
@@ -485,6 +489,8 @@ class OpenNotebook {
             this.closeModals();
             form.reset();
             await this.loadSources();
+            // Update notebook card counts in left panel
+            await this.updateCurrentNotebookCounts();
         } catch (error) {
             this.hideLoading();
             this.showError(error.message);
@@ -508,8 +514,27 @@ class OpenNotebook {
                 method: 'DELETE',
             });
             await this.loadSources();
+            // Update notebook card counts in left panel
+            await this.updateCurrentNotebookCounts();
         } catch (error) {
             this.showError('Failed to remove source');
+        }
+    }
+
+    async updateCurrentNotebookCounts() {
+        if (!this.currentNotebook) return;
+
+        // Get fresh counts
+        const [sources, notes] = await Promise.all([
+            this.api(`/notebooks/${this.currentNotebook.id}/sources`),
+            this.api(`/notebooks/${this.currentNotebook.id}/notes`)
+        ]);
+
+        // Find and update the notebook card in the left panel
+        const notebookCard = document.querySelector(`.notebook-item[data-id="${this.currentNotebook.id}"]`);
+        if (notebookCard) {
+            notebookCard.querySelector('.notebook-sources').textContent = `${sources.length} sources`;
+            notebookCard.querySelector('.notebook-notes').textContent = `${notes.length} notes`;
         }
     }
 
@@ -638,6 +663,8 @@ class OpenNotebook {
                 method: 'DELETE',
             });
             await this.loadNotes();
+            // Update notebook card counts in left panel
+            await this.updateCurrentNotebookCounts();
         } catch (error) {
             this.showError('Failed to delete note');
         }
@@ -701,6 +728,8 @@ class OpenNotebook {
             }
 
             await this.loadNotes();
+            // Update notebook card counts in left panel
+            await this.updateCurrentNotebookCounts();
             this.switchTab('notes');
             document.getElementById('customPrompt').value = '';
             this.setStatus(`Generated ${type}`);

@@ -2,7 +2,9 @@ package backend
 
 import (
 	"context"
+	"embed"
 	"fmt"
+	"io/fs"
 	"log"
 	"net/http"
 	"os"
@@ -11,6 +13,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 )
+
+//go:embed frontend/index.html frontend/static
+var frontendFS embed.FS
 
 // Server handles HTTP requests
 type Server struct {
@@ -61,15 +66,15 @@ func NewServer(cfg Config) (*Server, error) {
 
 // setupRoutes configures all routes
 func (s *Server) setupRoutes() {
-	// Serve static files with cache busting
-	s.http.GET("/static/*filepath", func(c *gin.Context) {
-		c.Header("Cache-Control", "no-cache, no-store, must-revalidate")
-		c.File("./frontend/static" + c.Param("filepath"))
-	})
+	// Serve static files from embedded filesystem
+	staticFS, _ := fs.Sub(frontendFS, "frontend/static")
+	s.http.StaticFS("/static", http.FS(staticFS))
 
+	// Serve index.html at root - need to serve from root of frontendFS
 	s.http.GET("/", func(c *gin.Context) {
 		c.Header("Cache-Control", "no-cache")
-		c.File("./frontend/index.html")
+		content, _ := frontendFS.ReadFile("frontend/index.html")
+		c.Data(http.StatusOK, "text/html; charset=utf-8", content)
 	})
 
 	// API routes
