@@ -362,6 +362,20 @@ class OpenNotebook {
         document.getElementById('notebookCount').textContent = this.notebooks.length;
     }
 
+    async loadNotebookCounts(notebookId, element) {
+        try {
+            const [sources, notes] = await Promise.all([
+                this.api(`/notebooks/${notebookId}/sources`),
+                this.api(`/notebooks/${notebookId}/notes`)
+            ]);
+
+            element.querySelector('.notebook-sources').textContent = `${sources.length} ${translations[this.language].sourcesStats}`;
+            element.querySelector('.notebook-notes').textContent = `${notes.length} ${translations[this.language].notesStats}`;
+        } catch (error) {
+            // Ignore errors for counts
+        }
+    }
+
     async selectNotebook(id) {
         this.currentNotebook = this.notebooks.find(nb => nb.id === id);
 
@@ -382,6 +396,103 @@ class OpenNotebook {
         document.getElementById('newNotebookModal').classList.add('active');
         document.getElementById('modalOverlay').classList.add('active');
         document.querySelector('#newNotebookForm input[name="name"]').focus();
+    }
+
+    async handleCreateNotebook(e) {
+        e.preventDefault();
+        const form = e.target;
+        const data = new FormData(form);
+
+        this.showLoading(translations[this.language].processing);
+
+        try {
+            const notebook = await this.api('/notebooks', {
+                method: 'POST',
+                body: JSON.stringify({
+                    name: data.get('name'),
+                    description: data.get('description') || undefined,
+                }),
+            });
+
+            this.notebooks.push(notebook);
+            this.renderNotebooks();
+            this.selectNotebook(notebook.id);
+            this.closeModals();
+            form.reset();
+            this.hideLoading();
+        } catch (error) {
+            this.hideLoading();
+            this.showError(error.message);
+        }
+    }
+
+    async deleteNotebook(id) {
+        try {
+            console.log('Deleting notebook:', id);
+            await this.api(`/notebooks/${id}`, { method: 'DELETE' });
+            console.log('Notebook deleted successfully');
+
+            this.notebooks = this.notebooks.filter(nb => nb.id !== id);
+
+            if (this.currentNotebook?.id === id) {
+                this.currentNotebook = null;
+                // Clear content areas
+                this.clearContentAreas();
+            }
+
+            this.renderNotebooks();
+            this.updateFooter();
+            console.log('Notebooks after delete:', this.notebooks.length);
+        } catch (error) {
+            console.error('Delete error:', error);
+            this.showError(translations[this.language].error + ': ' + error.message);
+        }
+    }
+
+    clearContentAreas() {
+        // Clear sources
+        const sourcesContainer = document.getElementById('sourcesGrid');
+        sourcesContainer.innerHTML = `
+            <div class="empty-state">
+                <svg width="64" height="64" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1">
+                    <path d="M20 8 L44 8 L48 12 L48 56 L20 56 Z"/>
+                    <polyline points="44,8 44,12 48,12"/>
+                    <line x1="28" y1="24" x2="40" y2="24"/>
+                    <line x1="28" y1="32" x2="40" y2="32"/>
+                    <line x1="28" y1="40" x2="36" y2="40"/>
+                </svg>
+                <p>${translations[this.language].addSourcesBegin}</p>
+                <p class="empty-hint">${translations[this.language].supportedFormats}</p>
+            </div>
+        `;
+
+        // Clear notes
+        const notesContainer = document.getElementById('notesList');
+        notesContainer.innerHTML = `
+            <div class="empty-state">
+                <svg width="48" height="48" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M12 4 L36 4 L40 8 L40 44 L12 44 Z"/>
+                    <polyline points="36,4 36,8 40,8"/>
+                </svg>
+                <p>${translations[this.language].noNotes}</p>
+                <p class="empty-hint">${translations[this.language].useTransformations}</p>
+            </div>
+        `;
+
+        // Clear chat
+        const chatContainer = document.getElementById('chatMessages');
+        chatContainer.innerHTML = `
+            <div class="chat-welcome">
+                <svg width="40" height="40" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <circle cx="20" cy="12" r="6"/>
+                    <path d="M8 38 C8 28 14 22 20 22 C26 22 32 28 32 38"/>
+                </svg>
+                <h3>${translations[this.language].chatWithSources}</h3>
+                <p>${translations[this.language].askQuestions}</p>
+            </div>
+        `;
+
+        this.currentChatSession = null;
     }
 
     async updateCurrentNotebookCounts() {
