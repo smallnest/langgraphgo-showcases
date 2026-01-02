@@ -488,6 +488,12 @@ func (s *Server) handleTransform(c *gin.Context) {
 			}
 		}
 		sources = filtered
+	} else {
+		// If no source IDs specified, use all and populate the list for the note
+		req.SourceIDs = make([]string, len(sources))
+		for i, src := range sources {
+			req.SourceIDs[i] = src.ID
+		}
 	}
 
 	if len(sources) == 0 {

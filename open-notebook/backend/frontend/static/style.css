@@ -859,6 +859,13 @@ body {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    margin-bottom: 2px;
+}
+
+.source-details-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
 }
 
 .source-meta {
@@ -967,24 +974,25 @@ body {
     inherits: false;
 }
 
-.transform-card.loading {
+.transform-card.loading,
+#btnCustomTransform.loading {
     pointer-events: none;
     position: relative;
     z-index: 1;
 }
 
-.transform-card.loading::after {
+.transform-card.loading::after,
+#btnCustomTransform.loading::after {
     content: '';
     position: absolute;
-    /* 紧贴边框外沿 */
     inset: -2px; 
     padding: 2px; 
     border-radius: inherit;
-    /* 核心：只旋转渐变起始角度，不旋转元素本身 */
+    /* 使用 currentColor 自动匹配同色系深色，并增加尾部渐变 */
     background: conic-gradient(
         from var(--gradient-angle), 
-        transparent 0% 80%, 
-        var(--text-primary) 85% 100%
+        transparent 0% 75%, 
+        currentColor 100%
     );
     -webkit-mask: 
         linear-gradient(#fff 0 0) content-box, 
@@ -994,8 +1002,7 @@ body {
         linear-gradient(#fff 0 0);
     -webkit-mask-composite: xor;
     mask-composite: exclude;
-    /* 针对变量进行动画 */
-    animation: snake-rotate 2s linear infinite;
+    animation: snake-rotate 1.5s linear infinite;
     z-index: 2;
 }
 

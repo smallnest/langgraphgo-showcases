@@ -740,11 +740,13 @@ class OpenNotebook {
         placeholder.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
         try {
+            const sourceIds = sources.map(s => s.id);
             const note = await this.api(`/notebooks/${this.currentNotebook.id}/transform`, {
                 method: 'POST',
                 body: JSON.stringify({
                     type: type,
                     prompt: customPrompt || undefined,
+                    source_ids: sourceIds,
                     length: 'medium',
                     format: 'markdown',
                 }),
@@ -768,6 +770,7 @@ class OpenNotebook {
                 .trim();
             
             placeholder.querySelector('.note-preview').textContent = plainText;
+            placeholder.querySelector('.note-sources').textContent = `${note.source_ids?.length || 0} 来源`;
             
             // 恢复删除按钮并绑定事件
             if (delBtn) {
