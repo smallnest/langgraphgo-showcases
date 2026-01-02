@@ -706,29 +706,41 @@ class OpenNotebook {
         }
 
         const customPrompt = document.getElementById('customPrompt').value;
+        const nameMap = {
+            summary: '摘要', faq: '常见问题', study_guide: '学习指南', outline: '大纲',
+            podcast: '播客', timeline: '时间线', glossary: '术语表', quiz: '测验'
+        };
+        const typeName = nameMap[type] || '内容';
 
-        let originalIcon = '';
+        // 1. 开始动画
         if (element) {
-            if (element.classList.contains('transform-card')) {
-                originalIcon = element.querySelector('.transform-icon').innerHTML;
-                element.classList.add('loading');
-                element.disabled = true;
-                element.querySelector('.transform-icon').innerHTML = `
-                    <svg class="hourglass-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M5 22h14"/>
-                        <path d="M5 2h14"/>
-                        <path d="M17 22v-4.172a2 2 0 0 0-.586-1.414L12 12l4.414-4.414A2 2 0 0 0 17 6.172V2"/>
-                        <path d="M7 22v-4.172a2 2 0 0 1 .586-1.414L12 12l-4.414-4.414A2 2 0 0 1 7 6.172V2"/>
-                    </svg>
-                `;
-                element.querySelector('.transform-name').textContent = '生成中...';
-            } else {
-                element.textContent = '生成中...';
-            }
+            element.classList.add('loading');
         }
 
+        // 2. 添加占位笔记
+        const notesContainer = document.getElementById('notesList');
+        const template = document.getElementById('noteTemplate');
+        const placeholder = template.content.cloneNode(true).querySelector('.note-item');
+        
+        placeholder.classList.add('placeholder');
+        placeholder.querySelector('.note-title').textContent = `正在生成${typeName}...`;
+        placeholder.querySelector('.note-preview').textContent = 'AI 正在分析您的来源并撰写笔记，请稍候...';
+        placeholder.querySelector('.note-date').textContent = '刚刚';
+        placeholder.querySelector('.note-type-badge').textContent = type.toUpperCase();
+        
+        // 占位符暂不显示删除按钮
+        const delBtn = placeholder.querySelector('.btn-delete-note');
+        if (delBtn) delBtn.style.display = 'none';
+        
+        // 如果有“暂无笔记”状态，先清空
+        const emptyState = notesContainer.querySelector('.empty-state');
+        if (emptyState) emptyState.remove();
+        
+        notesContainer.prepend(placeholder);
+        placeholder.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
         try {
-            await this.api(`/notebooks/${this.currentNotebook.id}/transform`, {
+            const note = await this.api(`/notebooks/${this.currentNotebook.id}/transform`, {
                 method: 'POST',
                 body: JSON.stringify({
                     type: type,
@@ -738,32 +750,48 @@ class OpenNotebook {
                 }),
             });
 
-            if (element && element.classList.contains('transform-card')) {
-                element.classList.remove('loading');
-                element.disabled = false;
-                element.querySelector('.transform-icon').innerHTML = originalIcon;
-                const nameMap = {
-                    summary: '摘要', faq: '常见问题', study_guide: '学习指南', outline: '大纲',
-                    podcast: '播客', timeline: '时间线', glossary: '术语表', quiz: '测验'
-                };
-                element.querySelector('.transform-name').textContent = nameMap[type] || '笔记';
+            // 3. 停止动画并更新占位符
+            if (element) element.classList.remove('loading');
+
+            // 替换占位符内容
+            placeholder.classList.remove('placeholder');
+            placeholder.dataset.id = note.id;
+            placeholder.querySelector('.note-title').textContent = note.title;
+            
+            const plainText = note.content
+                .replace(/^#+\s+/gm, '')
+                .replace(/\*\*/g, '')
+                .replace(/\*/g, '')
+                .replace(/`/g, '')
+                .replace(/\ \[([^\]]+)\]\([^)]+\)/g, '$1')
+                .replace(/\n+/g, ' ')
+                .trim();
+            
+            placeholder.querySelector('.note-preview').textContent = plainText;
+            
+            // 恢复删除按钮并绑定事件
+            if (delBtn) {
+                delBtn.style.display = 'flex';
+                delBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.deleteNote(note.id);
+                });
             }
 
-            await this.loadNotes();
+            // 绑定查看事件
+            placeholder.addEventListener('click', (e) => {
+                if (!e.target.closest('.btn-delete-note')) {
+                    this.viewNote(note);
+                }
+            });
+
             await this.updateCurrentNotebookCounts();
+            this.updateFooter();
             document.getElementById('customPrompt').value = '';
-            this.setStatus(`成功生成 ${type}`);
+            this.setStatus(`成功生成 ${typeName}`);
         } catch (error) {
-            if (element && element.classList.contains('transform-card')) {
-                element.classList.remove('loading');
-                element.disabled = false;
-                element.querySelector('.transform-icon').innerHTML = originalIcon;
-                const nameMap = {
-                    summary: '摘要', faq: '常见问题', study_guide: '学习指南', outline: '大纲',
-                    podcast: '播客', timeline: '时间线', glossary: '术语表', quiz: '测验'
-                };
-                element.querySelector('.transform-name').textContent = nameMap[type] || '笔记';
-            }
+            if (element) element.classList.remove('loading');
+            placeholder.remove(); // 失败则移除占位符
             this.showError(error.message);
         }
     }

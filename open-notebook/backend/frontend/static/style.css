@@ -960,6 +960,80 @@ body {
     padding: var(--space-md);
 }
 
+/* 定义角度变量，用于平滑动画 */
+@property --gradient-angle {
+    syntax: '<angle>';
+    initial-value: 0deg;
+    inherits: false;
+}
+
+.transform-card.loading {
+    pointer-events: none;
+    position: relative;
+    z-index: 1;
+}
+
+.transform-card.loading::after {
+    content: '';
+    position: absolute;
+    /* 紧贴边框外沿 */
+    inset: -2px; 
+    padding: 2px; 
+    border-radius: inherit;
+    /* 核心：只旋转渐变起始角度，不旋转元素本身 */
+    background: conic-gradient(
+        from var(--gradient-angle), 
+        transparent 0% 80%, 
+        var(--text-primary) 85% 100%
+    );
+    -webkit-mask: 
+        linear-gradient(#fff 0 0) content-box, 
+        linear-gradient(#fff 0 0);
+    mask: 
+        linear-gradient(#fff 0 0) content-box, 
+        linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    /* 针对变量进行动画 */
+    animation: snake-rotate 2s linear infinite;
+    z-index: 2;
+}
+
+@keyframes snake-rotate {
+    from { --gradient-angle: 0deg; }
+    to { --gradient-angle: 360deg; }
+}
+
+.note-item.placeholder {
+    border-left: 4px solid var(--text-light);
+    background: var(--bg-primary);
+    box-shadow: var(--shadow-sm);
+    animation: placeholder-shimmer 2s ease-in-out infinite;
+    position: relative;
+    overflow: hidden;
+}
+
+.note-item.placeholder::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.6), transparent);
+    transform: translateX(-100%);
+    animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+    100% { transform: translateX(100%); }
+}
+
+@keyframes placeholder-shimmer {
+    0%, 100% { border-left-color: var(--text-light); }
+    50% { border-left-color: var(--accent-primary); }
+}
+
 .note-item {
     position: relative;
     padding: var(--space-md);

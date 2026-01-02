@@ -511,9 +511,12 @@ func (s *Server) handleTransform(c *gin.Context) {
 		SourceIDs:  req.SourceIDs,
 	}
 
-	s.store.CreateNote(ctx, note)
+	if err := s.store.CreateNote(ctx, note); err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Failed to save note"})
+		return
+	}
 
-	c.JSON(http.StatusOK, response)
+	c.JSON(http.StatusOK, note)
 }
 
 func getTitleForType(t string) string {
