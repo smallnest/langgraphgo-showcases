@@ -44,22 +44,9 @@ func (vs *VectorStore) IngestDocuments(ctx context.Context, paths []string) erro
 	for _, path := range paths {
 		fmt.Printf("[VectorStore] Loading file: %s\n", path)
 
-		var content string
-		var err error
-
-		// Check if file needs markitdown conversion
-		ext := strings.ToLower(filepath.Ext(path))
-		if vs.cfg.EnableMarkitdown && vs.needsMarkitdown(ext) {
-			content, err = vs.convertWithMarkitdown(path)
-		} else {
-			// Direct read for text files or when markitdown is disabled
-			var bytes []byte
-			bytes, err = os.ReadFile(path)
-			content = string(bytes)
-		}
-
+		content, err := vs.ExtractDocument(ctx, path)
 		if err != nil {
-			return fmt.Errorf("failed to read file %s: %w", path, err)
+			return fmt.Errorf("failed to extract document %s: %w", path, err)
 		}
 
 		fmt.Printf("[VectorStore] File loaded, size: %d bytes\n", len(content))
@@ -69,6 +56,22 @@ func (vs *VectorStore) IngestDocuments(ctx context.Context, paths []string) erro
 	}
 
 	return nil
+}
+
+// ExtractDocument reads and converts a document to text/markdown
+func (vs *VectorStore) ExtractDocument(ctx context.Context, path string) (string, error) {
+	// Check if file needs markitdown conversion
+	ext := strings.ToLower(filepath.Ext(path))
+	if vs.cfg.EnableMarkitdown && vs.needsMarkitdown(ext) {
+		return vs.convertWithMarkitdown(path)
+	}
+
+	// Direct read for text files or when markitdown is disabled
+	bytes, err := os.ReadFile(path)
+	if err != nil {
+		return "", err
+	}
+	return string(bytes), nil
 }
 
 // IngestText ingests raw text content

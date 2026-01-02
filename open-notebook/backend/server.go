@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -355,6 +356,15 @@ func (s *Server) handleUpload(c *gin.Context) {
 		Metadata:   map[string]interface{}{"path": tempPath},
 	}
 
+	// Extract content
+	content, err := s.vectorStore.ExtractDocument(ctx, tempPath)
+	if err != nil {
+		log.Printf("Failed to extract document content: %v", err)
+		source.Content = fmt.Sprintf("Failed to extract: %v", err)
+	} else {
+		source.Content = content
+	}
+
 	if err := s.store.CreateSource(ctx, source); err != nil {
 		log.Printf("Failed to create source: %v", err)
 		// Clean up uploaded file on error
@@ -368,21 +378,20 @@ func (s *Server) handleUpload(c *gin.Context) {
 	stats, _ := s.vectorStore.GetStats(ctx)
 	totalDocsBefore := stats.TotalDocuments
 
-	if err := s.vectorStore.IngestDocuments(ctx, []string{tempPath}); err != nil {
-		log.Printf("Failed to ingest document: %v", err)
-		// Don't fail the request, just log the error
-		source.Content = fmt.Sprintf("Failed to ingest: %v", err)
-	} else {
-		// Get updated stats to calculate chunk count
-		stats, _ = s.vectorStore.GetStats(ctx)
-		chunkCount := stats.TotalDocuments - totalDocsBefore
+	if source.Content != "" && !strings.HasPrefix(source.Content, "Failed to extract") {
+		if err := s.vectorStore.IngestText(ctx, source.Name, source.Content); err != nil {
+			log.Printf("Failed to ingest document: %v", err)
+		} else {
+			// Get updated stats to calculate chunk count
+			stats, _ = s.vectorStore.GetStats(ctx)
+			chunkCount := stats.TotalDocuments - totalDocsBefore
 
-		// Update source with chunk count
-		source.ChunkCount = chunkCount
-		source.Content = fmt.Sprintf("Ingested %d chunks", chunkCount)
-
-		// Update in database
-		s.store.UpdateSourceChunkCount(ctx, source.ID, chunkCount)
+			// Update source with chunk count
+			source.ChunkCount = chunkCount
+			
+			// Update in database
+			s.store.UpdateSourceChunkCount(ctx, source.ID, chunkCount)
+		}
 	}
 
 	c.JSON(http.StatusCreated, source)

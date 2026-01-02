@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 
 	"github.com/smallnest/langgraphgo/showcases/open-notebook/backend"
 )
@@ -126,8 +127,30 @@ func runIngestMode(ctx context.Context, cfg backend.Config, filePath, notebookNa
 		fmt.Printf("📓 Created notebook: %s\n", notebookName)
 	}
 
+	// Extract content
+	content, err := vectorStore.ExtractDocument(ctx, filePath)
+	if err != nil {
+		log.Fatalf("Extraction failed: %v", err)
+	}
+
+	// Create source in database
+	fileInfo, _ := os.Stat(filePath)
+	source := &backend.Source{
+		NotebookID: notebookID,
+		Name:       filepath.Base(filePath),
+		Type:       "file",
+		FileName:   filepath.Base(filePath),
+		FileSize:   fileInfo.Size(),
+		Content:    content,
+		Metadata:   map[string]interface{}{"path": filePath},
+	}
+
+	if err := store.CreateSource(ctx, source); err != nil {
+		log.Fatalf("Failed to create source: %v", err)
+	}
+
 	// Ingest document
-	if err := vectorStore.IngestDocuments(ctx, []string{filePath}); err != nil {
+	if err := vectorStore.IngestText(ctx, source.Name, content); err != nil {
 		log.Fatalf("Ingestion failed: %v", err)
 	}
 
