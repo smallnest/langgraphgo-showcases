@@ -88,7 +88,6 @@ type TransformationRequest struct {
 	SourceIDs  []string `json:"source_ids"` // Specific sources to use, empty = all
 	Length     string   `json:"length"`     // "short", "medium", "long"
 	Format     string   `json:"format"`     // "markdown", "bullet_points", "paragraphs"
-	Language   string   `json:"language"`   // "en", "zh", etc.
 }
 
 // TransformationResponse represents the response from a transformation
@@ -113,7 +112,6 @@ type ChatRequest struct {
 	Message   string                 `json:"message"`
 	SessionID string                 `json:"session_id,omitempty"`
 	Context   map[string]interface{} `json:"context,omitempty"`
-	Language  string                 `json:"language,omitempty"`
 }
 
 // ChatResponse represents a chat response

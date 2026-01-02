@@ -505,7 +505,7 @@ func (s *Server) handleTransform(c *gin.Context) {
 	// Save as note
 	note := &Note{
 		NotebookID: notebookID,
-		Title:      getTitleForType(req.Type, req.Language),
+		Title:      getTitleForType(req.Type),
 		Content:    response.Content,
 		Type:       req.Type,
 		SourceIDs:  req.SourceIDs,
@@ -516,39 +516,21 @@ func (s *Server) handleTransform(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
-func getTitleForType(t string, language string) string {
-	if language == "zh" {
-		titles := map[string]string{
-			"summary":     "摘要",
-			"faq":         "常见问题解答",
-			"study_guide": "学习指南",
-			"outline":     "大纲",
-			"podcast":     "播客脚本",
-			"timeline":    "时间线",
-			"glossary":    "术语表",
-			"quiz":        "测验",
-		}
-		if title, ok := titles[t]; ok {
-			return title
-		}
-		return "笔记"
-	}
-
+func getTitleForType(t string) string {
 	titles := map[string]string{
-		"summary":     "Summary",
-		"faq":         "FAQ",
-		"study_guide": "Study Guide",
-		"outline":     "Outline",
-		"podcast":     "Podcast Script",
-		"timeline":    "Timeline",
-		"glossary":    "Glossary",
-		"quiz":        "Quiz",
+		"summary":     "摘要",
+		"faq":         "常见问题解答",
+		"study_guide": "学习指南",
+		"outline":     "大纲",
+		"podcast":     "播客脚本",
+		"timeline":    "时间线",
+		"glossary":    "术语表",
+		"quiz":        "测验",
 	}
-
 	if title, ok := titles[t]; ok {
 		return title
 	}
-	return "Note"
+	return "笔记"
 }
 
 // Chat handlers
@@ -623,7 +605,7 @@ func (s *Server) handleSendMessage(c *gin.Context) {
 	}
 
 	// Generate response
-	response, err := s.agent.Chat(ctx, notebookID, req.Message, session.Messages, req.Language)
+	response, err := s.agent.Chat(ctx, notebookID, req.Message, session.Messages)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: fmt.Sprintf("Chat failed: %v", err)})
 		return
@@ -672,7 +654,7 @@ func (s *Server) handleChat(c *gin.Context) {
 	}
 
 	// Generate response
-	response, err := s.agent.Chat(ctx, notebookID, req.Message, session.Messages, req.Language)
+	response, err := s.agent.Chat(ctx, notebookID, req.Message, session.Messages)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: fmt.Sprintf("Chat failed: %v", err)})
 		return
