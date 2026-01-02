@@ -15,17 +15,15 @@ class OpenNotebook {
     async init() {
         this.bindEvents();
         await this.loadNotebooks();
-
-        // 自动选择第一个笔记本
-        if (this.notebooks.length > 0) {
-            this.selectNotebook(this.notebooks[0].id);
-        }
     }
 
     bindEvents() {
         // 笔记本操作
         document.getElementById('btnNewNotebook').addEventListener('click', () => this.showNewNotebookModal());
-        document.getElementById('btnCreateFirst').addEventListener('click', () => this.showNewNotebookModal());
+        document.getElementById('btnNewNotebookLanding').addEventListener('click', () => this.showNewNotebookModal());
+        document.getElementById('btnBackToList').addEventListener('click', () => this.switchView('landing'));
+        document.getElementById('btnToggleRight').addEventListener('click', () => this.toggleRightPanel());
+        
         document.getElementById('newNotebookForm').addEventListener('submit', (e) => this.handleCreateNotebook(e));
         document.getElementById('btnCloseNotebookModal').addEventListener('click', () => this.closeModals());
         document.getElementById('btnCancelNotebook').addEventListener('click', () => this.closeModals());
@@ -47,16 +45,6 @@ class OpenNotebook {
                 document.querySelectorAll('.source-content').forEach(c => c.classList.remove('active'));
                 tab.classList.add('active');
                 document.getElementById(`source${tab.dataset.source.charAt(0).toUpperCase() + tab.dataset.source.slice(1)}`).classList.add('active');
-            });
-        });
-
-        // 面板标签切换
-        document.querySelectorAll('.tab-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-                btn.classList.add('active');
-                document.getElementById(`tab-${btn.dataset.tab}`).classList.add('active');
             });
         });
 
@@ -135,46 +123,47 @@ class OpenNotebook {
     }
 
     renderNotebooks() {
-        const container = document.getElementById('notebookList');
-        const template = document.getElementById('notebookTemplate');
+        this.renderNotebookCards();
+    }
+
+    renderNotebookCards() {
+        const container = document.getElementById('notebookGridLanding');
+        const template = document.getElementById('notebookCardTemplate');
 
         container.innerHTML = '';
 
         if (this.notebooks.length === 0) {
             container.innerHTML = `
-                <div class="empty-state" style="display: flex;">
-                    <svg width="48" height="48" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5">
-                        <rect x="8" y="8" width="32" height="32" rx="2"/>
-                        <line x1="16" y1="16" x2="32" y2="16"/>
-                        <line x1="16" y1="22" x2="28" y2="22"/>
+                <div class="empty-state">
+                    <svg width="64" height="64" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1">
+                        <rect x="12" y="12" width="40" height="40" rx="4"/>
+                        <line x1="20" y1="24" x2="44" y2="24"/>
+                        <line x1="20" y1="32" x2="40" y2="32"/>
                     </svg>
-                    <p>暂无笔记本</p>
-                    <button id="btnCreateFirst" class="btn-primary">创建你的第一个笔记本</button>
+                    <p>开启你的知识之旅</p>
+                    <button class="btn-primary" onclick="app.showNewNotebookModal()">创建第一个笔记本</button>
                 </div>
             `;
-            document.getElementById('btnCreateFirst').addEventListener('click', () => this.showNewNotebookModal());
             return;
         }
 
         this.notebooks.forEach(nb => {
             const clone = template.content.cloneNode(true);
-            const item = clone.querySelector('.notebook-item');
+            const card = clone.querySelector('.notebook-card');
 
-            item.dataset.id = nb.id;
-            if (this.currentNotebook?.id === nb.id) {
-                item.classList.add('active');
-            }
+            card.dataset.id = nb.id;
+            card.querySelector('.notebook-card-name').textContent = nb.name;
+            card.querySelector('.notebook-card-desc').textContent = nb.description || '暂无描述';
+            
+            this.loadNotebookCardCounts(nb.id, card);
 
-            item.querySelector('.notebook-name').textContent = nb.name;
-            this.loadNotebookCounts(nb.id, item);
-
-            item.addEventListener('click', (e) => {
-                if (!e.target.closest('.btn-delete-notebook')) {
+            card.addEventListener('click', (e) => {
+                if (!e.target.closest('.btn-delete-card')) {
                     this.selectNotebook(nb.id);
                 }
             });
 
-            item.querySelector('.btn-delete-notebook').addEventListener('click', (e) => {
+            card.querySelector('.btn-delete-card').addEventListener('click', (e) => {
                 e.stopPropagation();
                 if (confirm('确定要删除此笔记本吗？')) {
                     this.deleteNotebook(nb.id);
@@ -183,30 +172,50 @@ class OpenNotebook {
 
             container.appendChild(clone);
         });
-
-        document.getElementById('notebookCount').textContent = this.notebooks.length;
     }
 
-    async loadNotebookCounts(notebookId, element) {
+    async loadNotebookCardCounts(notebookId, element) {
         try {
             const [sources, notes] = await Promise.all([
                 this.api(`/notebooks/${notebookId}/sources`),
                 this.api(`/notebooks/${notebookId}/notes`)
             ]);
 
-            element.querySelector('.notebook-sources').textContent = `${sources.length} 来源`;
-            element.querySelector('.notebook-notes').textContent = `${notes.length} 笔记`;
+            element.querySelector('.stat-sources').textContent = `${sources.length} 来源`;
+            element.querySelector('.stat-notes').textContent = `${notes.length} 笔记`;
         } catch (error) {
             // 忽略错误
         }
     }
 
+    switchView(view) {
+        const landing = document.getElementById('landingPage');
+        const workspace = document.getElementById('workspaceContainer');
+        const header = document.querySelector('.app-header');
+
+        if (view === 'workspace') {
+            landing.classList.add('hidden');
+            workspace.classList.remove('hidden');
+            header.classList.add('hidden');
+        } else {
+            landing.classList.remove('hidden');
+            workspace.classList.add('hidden');
+            header.classList.remove('hidden');
+            this.currentNotebook = null;
+            this.renderNotebookCards();
+        }
+    }
+
+    toggleRightPanel() {
+        const grid = document.querySelector('.main-grid');
+        grid.classList.toggle('right-collapsed');
+    }
+
     async selectNotebook(id) {
         this.currentNotebook = this.notebooks.find(nb => nb.id === id);
-
-        document.querySelectorAll('.notebook-item').forEach(item => {
-            item.classList.toggle('active', item.dataset.id === id);
-        });
+        
+        document.getElementById('currentNotebookName').textContent = this.currentNotebook.name;
+        this.switchView('workspace');
 
         await Promise.all([
             this.loadSources(),
@@ -259,6 +268,7 @@ class OpenNotebook {
             if (this.currentNotebook?.id === id) {
                 this.currentNotebook = null;
                 this.clearContentAreas();
+                this.switchView('landing');
             }
 
             this.renderNotebooks();
@@ -493,9 +503,14 @@ class OpenNotebook {
 
         const container = document.getElementById('notesList');
         const template = document.getElementById('noteTemplate');
+        const countHeader = document.querySelector('.section-notes .panel-title');
 
         try {
             const notes = await this.api(`/notebooks/${this.currentNotebook.id}/notes`);
+            
+            if (countHeader) {
+                countHeader.textContent = `笔记 (${notes.length})`;
+            }
 
             if (notes.length === 0) {
                 container.innerHTML = `
@@ -681,7 +696,6 @@ class OpenNotebook {
 
             await this.loadNotes();
             await this.updateCurrentNotebookCounts();
-            this.switchTab('notes');
             document.getElementById('customPrompt').value = '';
             this.setStatus(`成功生成 ${type}`);
         } catch (error) {
@@ -817,15 +831,6 @@ class OpenNotebook {
         document.getElementById('footerStatus').textContent = text;
     }
 
-    switchTab(tab) {
-        document.querySelectorAll('.tab-btn').forEach(btn => {
-            btn.classList.toggle('active', btn.dataset.tab === tab);
-        });
-        document.querySelectorAll('.tab-content').forEach(content => {
-            content.classList.toggle('active', content.id === `tab-${tab}`);
-        });
-    }
-
     showError(message) {
         this.setStatus(`错误: ${message}`);
 
@@ -872,10 +877,10 @@ class OpenNotebook {
             this.api(`/notebooks/${this.currentNotebook.id}/notes`)
         ]);
 
-        const notebookCard = document.querySelector(`.notebook-item[data-id="${this.currentNotebook.id}"]`);
+        const notebookCard = document.querySelector(`.notebook-card[data-id="${this.currentNotebook.id}"]`);
         if (notebookCard) {
-            notebookCard.querySelector('.notebook-sources').textContent = `${sources.length} 来源`;
-            notebookCard.querySelector('.notebook-notes').textContent = `${notes.length} 笔记`;
+            notebookCard.querySelector('.stat-sources').textContent = `${sources.length} 来源`;
+            notebookCard.querySelector('.stat-notes').textContent = `${notes.length} 笔记`;
         }
     }
 }
