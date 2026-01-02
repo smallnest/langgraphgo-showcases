@@ -306,12 +306,61 @@ class OpenNotebook {
     renderNotebooks() {
         const container = document.getElementById('notebookList');
         const template = document.getElementById('notebookTemplate');
-        // ... (rest of renderNotebooks is already updated, but I need to be careful not to break it if I don't include it in replace)
-        // I will just match loadNotebooks block if possible, but renderNotebooks follows it immediately.
-        // I will try to target just loadNotebooks first.
+
+        // Clear existing content
+        container.innerHTML = '';
+
+        // Add empty state if no notebooks
+        if (this.notebooks.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state" style="display: flex;">
+                    <svg width="48" height="48" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <rect x="8" y="8" width="32" height="32" rx="2"/>
+                        <line x1="16" y1="16" x2="32" y2="16"/>
+                        <line x1="16" y1="22" x2="28" y2="22"/>
+                    </svg>
+                    <p>${translations[this.language].noNotebooks}</p>
+                    <button id="btnCreateFirst" class="btn-primary">${translations[this.language].createFirstNotebook}</button>
+                </div>
+            `;
+            // Re-bind the create button event
+            document.getElementById('btnCreateFirst').addEventListener('click', () => this.showNewNotebookModal());
+            return;
+        }
+
+        // Render notebook items
+        this.notebooks.forEach(nb => {
+            const clone = template.content.cloneNode(true);
+            const item = clone.querySelector('.notebook-item');
+
+            item.dataset.id = nb.id;
+            if (this.currentNotebook?.id === nb.id) {
+                item.classList.add('active');
+            }
+
+            item.querySelector('.notebook-name').textContent = nb.name;
+
+            // Fetch counts
+            this.loadNotebookCounts(nb.id, item);
+
+            item.addEventListener('click', (e) => {
+                if (!e.target.closest('.btn-delete-notebook')) {
+                    this.selectNotebook(nb.id);
+                }
+            });
+
+            item.querySelector('.btn-delete-notebook').addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (confirm(translations[this.language].deleteNotebookConfirm)) {
+                    this.deleteNotebook(nb.id);
+                }
+            });
+
+            container.appendChild(clone);
+        });
+
+        document.getElementById('notebookCount').textContent = this.notebooks.length;
     }
-    // Wait, I can't just replace the block because I need to match enough context.
-    // Let's replace just the error message in loadNotebooks.
 
     async updateCurrentNotebookCounts() {
         if (!this.currentNotebook) return;

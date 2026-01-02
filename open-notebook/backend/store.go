@@ -26,6 +26,9 @@ func NewStore(cfg Config) (*Store, error) {
 		return nil, fmt.Errorf("failed to create data directory: %w", err)
 	}
 
+	absPath, _ := filepath.Abs(cfg.StorePath)
+	fmt.Printf("📦 Initializing SQLite Store at: %s\n", absPath)
+
 	db, err := sql.Open("sqlite", cfg.StorePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %w", err)

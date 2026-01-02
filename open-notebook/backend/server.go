@@ -60,6 +60,23 @@ func NewServer(cfg Config) (*Server, error) {
 		http:        router,
 	}
 
+	// Restore vector store from persistent storage
+	ctx := context.Background()
+	notebooks, _ := store.ListNotebooks(ctx)
+	fmt.Printf("🔄 Restoring vector index for %d notebooks...\n", len(notebooks))
+	for _, nb := range notebooks {
+		sources, _ := store.ListSources(ctx, nb.ID)
+		for _, src := range sources {
+			if src.Content != "" {
+				if err := vectorStore.IngestText(ctx, src.Name, src.Content); err != nil {
+					log.Printf("Failed to restore source %s: %v", src.Name, err)
+				}
+			}
+		}
+	}
+	stats, _ := vectorStore.GetStats(ctx)
+	fmt.Printf("✅ Vector index restored: %d documents\n", stats.TotalDocuments)
+
 	s.setupRoutes()
 
 	return s, nil
