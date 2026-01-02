@@ -133,6 +133,7 @@ func (a *Agent) getTransformationPrompt(req *TransformationRequest) string {
 	switch req.Type {
 	case "summary":
 		return `你是一个擅长创建综合摘要的专家。请根据以下来源，以{format}格式创建一个{length}摘要。
+**注意：无论来源是什么语言，请务必使用中文进行回复。不要使用 ` + "```markdown" + ` 标记包裹输出。**
 
 来源：
 {sources}
@@ -141,6 +142,7 @@ func (a *Agent) getTransformationPrompt(req *TransformationRequest) string {
 
 	case "faq":
 		return `你是一个擅长创建常见问题解答（FAQ）文档的专家。请根据以下来源，以{format}格式生成一个全面的FAQ。
+**注意：无论来源是什么语言，请务必使用中文进行回复。不要使用 ` + "```markdown" + ` 标记包裹输出。**
 
 来源：
 {sources}
@@ -149,6 +151,7 @@ func (a *Agent) getTransformationPrompt(req *TransformationRequest) string {
 
 	case "study_guide":
 		return `你是一个教育专家。请根据以下来源，以{format}格式创建一个全面的学习指南。
+**注意：无论来源是什么语言，请务必使用中文进行回复。不要使用 ` + "```markdown" + ` 标记包裹输出。**
 
 来源：
 {sources}
@@ -164,6 +167,7 @@ func (a *Agent) getTransformationPrompt(req *TransformationRequest) string {
 
 	case "outline":
 		return `你是一个擅长创建结构化大纲的专家。请根据以下来源，以{format}格式创建一个详细的层级大纲。
+**注意：无论来源是什么语言，请务必使用中文进行回复。不要使用 ` + "```markdown" + ` 标记包裹输出。**
 
 来源：
 {sources}
@@ -176,6 +180,7 @@ func (a *Agent) getTransformationPrompt(req *TransformationRequest) string {
 
 	case "podcast":
 		return `你是一个播客脚本编剧。请根据以下来源创建一个引人入胜的播客脚本。
+**注意：无论来源是什么语言，请务必使用中文进行回复。不要使用 ` + "```markdown" + ` 标记包裹输出。**
 
 来源：
 {sources}
@@ -192,6 +197,7 @@ func (a *Agent) getTransformationPrompt(req *TransformationRequest) string {
 
 	case "timeline":
 		return `你是一个擅长创建按时间顺序排列的时间线的专家。请根据以下来源，以{format}格式创建一个时间线。
+**注意：无论来源是什么语言，请务必使用中文进行回复。不要使用 ` + "```markdown" + ` 标记包裹输出。**
 
 来源：
 {sources}
@@ -204,6 +210,7 @@ func (a *Agent) getTransformationPrompt(req *TransformationRequest) string {
 
 	case "glossary":
 		return `你是一个擅长创建术语表的专家。请根据以下来源，以{format}格式创建一个全面的术语表。
+**注意：无论来源是什么语言，请务必使用中文进行回复。不要使用 ` + "```markdown" + ` 标记包裹输出。**
 
 来源：
 {sources}
@@ -216,6 +223,7 @@ func (a *Agent) getTransformationPrompt(req *TransformationRequest) string {
 
 	case "quiz":
 		return `你是一个创建评估材料的教育家。请根据以下来源，以{format}格式创建一个测验。
+**注意：无论来源是什么语言，请务必使用中文进行回复。不要使用 ` + "```markdown" + ` 标记包裹输出。**
 
 来源：
 {sources}
@@ -230,6 +238,7 @@ func (a *Agent) getTransformationPrompt(req *TransformationRequest) string {
 
 	case "custom":
 		return `你是一个有用的助手。根据以下来源和自定义请求，生成请求的内容。
+**注意：无论来源是什么语言，请务必使用中文进行回复。不要使用 ` + "```markdown" + ` 标记包裹输出。**
 
 来源：
 {sources}
@@ -241,6 +250,7 @@ func (a *Agent) getTransformationPrompt(req *TransformationRequest) string {
 
 	default:
 		return `你是一个有用的助手。根据以下来源，以{format}格式提供一个{type}。
+**注意：无论来源是什么语言，请务必使用中文进行回复。不要使用 ` + "```markdown" + ` 标记包裹输出。**
 
 来源：
 {sources}
@@ -283,7 +293,9 @@ func (a *Agent) Chat(ctx context.Context, notebookID, message string, history []
 	}
 
 	// Create RAG prompt using f-string format
-	systemPrompt := `你是一个笔记本应用程序的有用人工智能助手。根据提供的上下文和聊天历史记录回答用户的问题。如果上下文中没有足够的信息，请说明情况并提供一般性的回答。
+	systemPrompt := `你是一个笔记本应用程序的有用人工智能助手。根据提供的上下文和聊天历史记录回答用户的问题。
+**无论来源文件是什么语言，请务必使用中文回答用户的问题。不要使用 ` + "```markdown" + ` 标记包裹输出。**
+如果上下文中没有足够的信息，请说明情况并提供一般性的回答。
 
 聊天历史记录：
 {history}
