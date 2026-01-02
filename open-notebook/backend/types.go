@@ -113,6 +113,7 @@ type ChatRequest struct {
 	Message   string                 `json:"message"`
 	SessionID string                 `json:"session_id,omitempty"`
 	Context   map[string]interface{} `json:"context,omitempty"`
+	Language  string                 `json:"language,omitempty"`
 }
 
 // ChatResponse represents a chat response

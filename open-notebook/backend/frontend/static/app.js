@@ -2,17 +2,146 @@
 // OPEN NOTEBOOK - Application Logic
 // ============================================
 
+const translations = {
+    en: {
+        newNotebook: "New Notebook",
+        notebooks: "NOTEBOOKS",
+        noNotebooks: "No notebooks yet",
+        createFirstNotebook: "Create your first notebook",
+        sources: "SOURCES",
+        addSourcesBegin: "Add sources to begin",
+        supportedFormats: "PDF, TXT, MD, DOCX, HTML supported",
+        notes: "NOTES",
+        chat: "CHAT",
+        transform: "TRANSFORM",
+        noNotes: "No notes generated",
+        useTransformations: "Use transformations to create notes from sources",
+        chatWithSources: "Chat with your sources",
+        askQuestions: "Ask questions about the content in your notebook",
+        askQuestionPlaceholder: "Ask a question...",
+        summary: "Summary",
+        faq: "FAQ",
+        studyGuide: "Study Guide",
+        outline: "Outline",
+        podcast: "Podcast",
+        timeline: "Timeline",
+        glossary: "Glossary",
+        quiz: "Quiz",
+        customTransformation: "Custom Transformation",
+        describeGeneration: "Describe what you want to generate...",
+        generate: "Generate",
+        ready: "Ready",
+        processing: "Processing...",
+        name: "Name",
+        researchNotes: "Research Notes",
+        descriptionOptional: "Description (optional)",
+        briefDescription: "A brief description...",
+        cancel: "Cancel",
+        createNotebook: "Create Notebook",
+        addSource: "Add Source",
+        uploadFile: "Upload File",
+        pasteText: "Paste Text",
+        url: "URL",
+        dropFiles: "Drop files here or click to browse",
+        noteTitle: "Note Title",
+        content: "Content",
+        pasteContent: "Paste or type your content here...",
+        nameOptional: "Name (optional)",
+        articleTitle: "Article Title",
+        sourcesStats: "sources",
+        notesStats: "notes",
+        chunks: "chunks",
+        generating: "Generating...",
+        thinking: "Thinking...",
+        error: "Error",
+        copied: "Copied!",
+        failedCopy: "Failed to copy",
+        deleteNotebookConfirm: "Delete this notebook?",
+        failedLoadNotebooks: "Failed to load notebooks",
+        failedLoadSources: "Failed to load sources",
+        failedLoadNotes: "Failed to load notes",
+        failedLoadChat: "Failed to load chat sessions",
+        pleaseSelectNotebook: "Please select a notebook first",
+        pleaseAddSources: "Please add sources first",
+        sourceText: "Text source"
+    },
+    zh: {
+        newNotebook: "新建笔记本",
+        notebooks: "笔记本",
+        noNotebooks: "暂无笔记本",
+        createFirstNotebook: "创建你的第一个笔记本",
+        sources: "来源",
+        addSourcesBegin: "添加来源",
+        supportedFormats: "支持 PDF, TXT, MD, DOCX, HTML",
+        notes: "笔记",
+        chat: "对话",
+        transform: "转换",
+        noNotes: "暂无笔记",
+        useTransformations: "使用转换从来源生成笔记",
+        chatWithSources: "与来源对话",
+        askQuestions: "询问关于笔记本内容的问题",
+        askQuestionPlaceholder: "输入问题...",
+        summary: "摘要",
+        faq: "常见问题",
+        studyGuide: "学习指南",
+        outline: "大纲",
+        podcast: "播客",
+        timeline: "时间线",
+        glossary: "术语表",
+        quiz: "测验",
+        customTransformation: "自定义转换",
+        describeGeneration: "描述你想生成的内容...",
+        generate: "生成",
+        ready: "就绪",
+        processing: "处理中...",
+        name: "名称",
+        researchNotes: "研究笔记",
+        descriptionOptional: "描述 (可选)",
+        briefDescription: "简要描述...",
+        cancel: "取消",
+        createNotebook: "创建笔记本",
+        addSource: "添加来源",
+        uploadFile: "上传文件",
+        pasteText: "粘贴文本",
+        url: "网址",
+        dropFiles: "拖放文件到此处或点击浏览",
+        noteTitle: "笔记标题",
+        content: "内容",
+        pasteContent: "在此粘贴或输入内容...",
+        nameOptional: "名称 (可选)",
+        articleTitle: "文章标题",
+        sourcesStats: "来源",
+        notesStats: "笔记",
+        chunks: "块",
+        generating: "生成中...",
+        thinking: "思考中...",
+        error: "错误",
+        copied: "已复制!",
+        failedCopy: "复制失败",
+        deleteNotebookConfirm: "删除此笔记本？",
+        failedLoadNotebooks: "加载笔记本失败",
+        failedLoadSources: "加载来源失败",
+        failedLoadNotes: "加载笔记失败",
+        failedLoadChat: "加载对话失败",
+        pleaseSelectNotebook: "请先选择一个笔记本",
+        pleaseAddSources: "请先添加来源",
+        sourceText: "文本来源"
+    }
+};
+
 class OpenNotebook {
     constructor() {
         this.notebooks = [];
         this.currentNotebook = null;
         this.apiBase = '/api';
         this.currentChatSession = null;
+        this.language = localStorage.getItem('language') || 'zh';
 
         this.init();
     }
 
     async init() {
+        this.updateLanguage();
         this.bindEvents();
         await this.loadNotebooks();
 
@@ -23,6 +152,20 @@ class OpenNotebook {
     }
 
     bindEvents() {
+        // Language toggle
+        document.getElementById('btnLangToggle').addEventListener('click', () => {
+            this.language = this.language === 'en' ? 'zh' : 'en';
+            localStorage.setItem('language', this.language);
+            this.updateLanguage();
+            // Refresh content if needed
+            if (this.currentNotebook) {
+                this.renderNotebooks(); // Re-render to update counts text if strictly needed, mostly static
+                this.loadSources(); // Re-render sources to update "chunks" text
+                this.loadNotes();   // Re-render notes to update "sources" text
+                this.updateFooter();
+            }
+        });
+
         // Notebook actions
         document.getElementById('btnNewNotebook').addEventListener('click', () => this.showNewNotebookModal());
         document.getElementById('btnCreateFirst').addEventListener('click', () => this.showNewNotebookModal());
@@ -94,6 +237,30 @@ class OpenNotebook {
         dropZone.addEventListener('drop', (e) => this.handleDrop(e));
     }
 
+    updateLanguage() {
+        const t = translations[this.language];
+
+        // Update toggle button text to show what it will switch to
+        document.getElementById('btnLangToggle').textContent = this.language === 'en' ? '中' : 'EN';
+
+        // Update elements with data-i18n attribute
+        document.querySelectorAll('[data-i18n]').forEach(el => {
+            const key = el.getAttribute('data-i18n');
+            if (t[key]) {
+                el.textContent = t[key];
+            }
+        });
+
+        // Update placeholders
+        document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+            const key = el.getAttribute('data-i18n-placeholder');
+            if (t[key]) {
+                el.placeholder = t[key];
+            }
+        });
+    }
+
+
     // API Methods
     async api(endpoint, options = {}) {
         const defaults = {
@@ -132,200 +299,35 @@ class OpenNotebook {
             this.renderNotebooks();
             this.updateFooter();
         } catch (error) {
-            this.showError('Failed to load notebooks');
+            this.showError(translations[this.language].failedLoadNotebooks);
         }
     }
 
     renderNotebooks() {
         const container = document.getElementById('notebookList');
         const template = document.getElementById('notebookTemplate');
-
-        // Clear existing content
-        container.innerHTML = '';
-
-        // Add empty state if no notebooks
-        if (this.notebooks.length === 0) {
-            container.innerHTML = `
-                <div class="empty-state" style="display: flex;">
-                    <svg width="48" height="48" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5">
-                        <rect x="8" y="8" width="32" height="32" rx="2"/>
-                        <line x1="16" y1="16" x2="32" y2="16"/>
-                        <line x1="16" y1="22" x2="28" y2="22"/>
-                    </svg>
-                    <p>No notebooks yet</p>
-                    <button id="btnCreateFirst" class="btn-primary">Create your first notebook</button>
-                </div>
-            `;
-            // Re-bind the create button event
-            document.getElementById('btnCreateFirst').addEventListener('click', () => this.showNewNotebookModal());
-            return;
-        }
-
-        // Render notebook items
-        this.notebooks.forEach(nb => {
-            const clone = template.content.cloneNode(true);
-            const item = clone.querySelector('.notebook-item');
-
-            item.dataset.id = nb.id;
-            if (this.currentNotebook?.id === nb.id) {
-                item.classList.add('active');
-            }
-
-            item.querySelector('.notebook-name').textContent = nb.name;
-
-            // Fetch counts
-            this.loadNotebookCounts(nb.id, item);
-
-            item.addEventListener('click', (e) => {
-                if (!e.target.closest('.btn-delete-notebook')) {
-                    this.selectNotebook(nb.id);
-                }
-            });
-
-            item.querySelector('.btn-delete-notebook').addEventListener('click', (e) => {
-                e.stopPropagation();
-                if (confirm('Delete this notebook?')) {
-                    this.deleteNotebook(nb.id);
-                }
-            });
-
-            container.appendChild(clone);
-        });
-
-        document.getElementById('notebookCount').textContent = this.notebooks.length;
+        // ... (rest of renderNotebooks is already updated, but I need to be careful not to break it if I don't include it in replace)
+        // I will just match loadNotebooks block if possible, but renderNotebooks follows it immediately.
+        // I will try to target just loadNotebooks first.
     }
+    // Wait, I can't just replace the block because I need to match enough context.
+    // Let's replace just the error message in loadNotebooks.
 
-    async loadNotebookCounts(notebookId, element) {
-        try {
-            const [sources, notes] = await Promise.all([
-                this.api(`/notebooks/${notebookId}/sources`),
-                this.api(`/notebooks/${notebookId}/notes`)
-            ]);
+    async updateCurrentNotebookCounts() {
+        if (!this.currentNotebook) return;
 
-            element.querySelector('.notebook-sources').textContent = `${sources.length} sources`;
-            element.querySelector('.notebook-notes').textContent = `${notes.length} notes`;
-        } catch (error) {
-            // Ignore errors for counts
-        }
-    }
-
-    async selectNotebook(id) {
-        this.currentNotebook = this.notebooks.find(nb => nb.id === id);
-
-        document.querySelectorAll('.notebook-item').forEach(item => {
-            item.classList.toggle('active', item.dataset.id === id);
-        });
-
-        await Promise.all([
-            this.loadSources(),
-            this.loadNotes(),
-            this.loadChatSessions()
+        // Get fresh counts
+        const [sources, notes] = await Promise.all([
+            this.api(`/notebooks/${this.currentNotebook.id}/sources`),
+            this.api(`/notebooks/${this.currentNotebook.id}/notes`)
         ]);
 
-        this.setStatus(`Selected: ${this.currentNotebook.name}`);
-    }
-
-    showNewNotebookModal() {
-        document.getElementById('newNotebookModal').classList.add('active');
-        document.getElementById('modalOverlay').classList.add('active');
-        document.querySelector('#newNotebookForm input[name="name"]').focus();
-    }
-
-    async handleCreateNotebook(e) {
-        e.preventDefault();
-        const form = e.target;
-        const data = new FormData(form);
-
-        this.showLoading('Creating notebook...');
-
-        try {
-            const notebook = await this.api('/notebooks', {
-                method: 'POST',
-                body: JSON.stringify({
-                    name: data.get('name'),
-                    description: data.get('description') || undefined,
-                }),
-            });
-
-            this.notebooks.push(notebook);
-            this.renderNotebooks();
-            this.selectNotebook(notebook.id);
-            this.closeModals();
-            form.reset();
-            this.hideLoading();
-        } catch (error) {
-            this.hideLoading();
-            this.showError(error.message);
+        // Find and update the notebook card in the left panel
+        const notebookCard = document.querySelector(`.notebook-item[data-id="${this.currentNotebook.id}"]`);
+        if (notebookCard) {
+            notebookCard.querySelector('.notebook-sources').textContent = `${sources.length} ${translations[this.language].sourcesStats}`;
+            notebookCard.querySelector('.notebook-notes').textContent = `${notes.length} ${translations[this.language].notesStats}`;
         }
-    }
-
-    async deleteNotebook(id) {
-        try {
-            console.log('Deleting notebook:', id);
-            await this.api(`/notebooks/${id}`, { method: 'DELETE' });
-            console.log('Notebook deleted successfully');
-
-            this.notebooks = this.notebooks.filter(nb => nb.id !== id);
-
-            if (this.currentNotebook?.id === id) {
-                this.currentNotebook = null;
-                // Clear content areas
-                this.clearContentAreas();
-            }
-
-            this.renderNotebooks();
-            this.updateFooter();
-            console.log('Notebooks after delete:', this.notebooks.length);
-        } catch (error) {
-            console.error('Delete error:', error);
-            this.showError('Failed to delete notebook: ' + error.message);
-        }
-    }
-
-    clearContentAreas() {
-        // Clear sources
-        const sourcesContainer = document.getElementById('sourcesGrid');
-        sourcesContainer.innerHTML = `
-            <div class="empty-state">
-                <svg width="64" height="64" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1">
-                    <path d="M20 8 L44 8 L48 12 L48 56 L20 56 Z"/>
-                    <polyline points="44,8 44,12 48,12"/>
-                    <line x1="28" y1="24" x2="40" y2="24"/>
-                    <line x1="28" y1="32" x2="40" y2="32"/>
-                    <line x1="28" y1="40" x2="36" y2="40"/>
-                </svg>
-                <p>Add sources to begin</p>
-                <p class="empty-hint">PDF, TXT, MD, DOCX, HTML supported</p>
-            </div>
-        `;
-
-        // Clear notes
-        const notesContainer = document.getElementById('notesList');
-        notesContainer.innerHTML = `
-            <div class="empty-state">
-                <svg width="48" height="48" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5">
-                    <path d="M12 4 L36 4 L40 8 L40 44 L12 44 Z"/>
-                    <polyline points="36,4 36,8 40,8"/>
-                </svg>
-                <p>No notes generated</p>
-                <p class="empty-hint">Use transformations to create notes from sources</p>
-            </div>
-        `;
-
-        // Clear chat
-        const chatContainer = document.getElementById('chatMessages');
-        chatContainer.innerHTML = `
-            <div class="chat-welcome">
-                <svg width="40" height="40" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.5">
-                    <circle cx="20" cy="12" r="6"/>
-                    <path d="M8 38 C8 28 14 22 20 22 C26 22 32 28 32 38"/>
-                </svg>
-                <h3>Chat with your sources</h3>
-                <p>Ask questions about the content in your notebook</p>
-            </div>
-        `;
-
-        this.currentChatSession = null;
     }
 
     // Source Methods
@@ -348,8 +350,8 @@ class OpenNotebook {
                             <line x1="28" y1="32" x2="40" y2="32"/>
                             <line x1="28" y1="40" x2="36" y2="40"/>
                         </svg>
-                        <p>Add sources to begin</p>
-                        <p class="empty-hint">PDF, TXT, MD, DOCX, HTML supported</p>
+                        <p>${translations[this.language].addSourcesBegin}</p>
+                        <p class="empty-hint">${translations[this.language].supportedFormats}</p>
                     </div>
                 `;
                 return;
@@ -364,8 +366,10 @@ class OpenNotebook {
                 card.dataset.id = source.id;
                 card.querySelector('.source-type-badge').textContent = source.type;
                 card.querySelector('.source-name').textContent = source.name;
-                card.querySelector('.source-meta').textContent = this.formatFileSize(source.file_size) || 'Text source';
+                card.querySelector('.source-meta').textContent = this.formatFileSize(source.file_size) || translations[this.language].sourceText;
                 card.querySelector('.chunk-count').textContent = source.chunk_count || 0;
+                // Update "chunks" label manually as it is next to chunk-count
+                card.querySelector('.chunk-count').nextElementSibling.textContent = ` ${translations[this.language].chunks}`;
 
                 // Icon based on type
                 const icon = this.getSourceIcon(source.type);
@@ -402,7 +406,7 @@ class OpenNotebook {
 
     showAddSourceModal() {
         if (!this.currentNotebook) {
-            this.showError('Please select a notebook first');
+            this.showError(translations[this.language].pleaseSelectNotebook);
             return;
         }
         document.getElementById('addSourceModal').classList.add('active');
@@ -413,7 +417,7 @@ class OpenNotebook {
         const files = e.target.files;
         if (!files.length) return;
 
-        this.showLoading('Uploading and processing...');
+        this.showLoading(translations[this.language].processing);
 
         for (const file of files) {
             const formData = new FormData();
@@ -427,7 +431,7 @@ class OpenNotebook {
                     body: formData,
                 });
             } catch (error) {
-                this.showError(`Failed to upload ${file.name}`);
+                this.showError(`${translations[this.language].error}: ${file.name}`);
             }
         }
 
@@ -444,7 +448,7 @@ class OpenNotebook {
         const form = e.target;
         const data = new FormData(form);
 
-        this.showLoading('Adding source...');
+        this.showLoading(translations[this.language].processing);
 
         try {
             await this.api(`/notebooks/${this.currentNotebook.id}/sources`, {
@@ -473,7 +477,7 @@ class OpenNotebook {
         const form = e.target;
         const data = new FormData(form);
 
-        this.showLoading('Fetching URL...');
+        this.showLoading(translations[this.language].processing);
 
         try {
             await this.api(`/notebooks/${this.currentNotebook.id}/sources`, {
@@ -517,24 +521,7 @@ class OpenNotebook {
             // Update notebook card counts in left panel
             await this.updateCurrentNotebookCounts();
         } catch (error) {
-            this.showError('Failed to remove source');
-        }
-    }
-
-    async updateCurrentNotebookCounts() {
-        if (!this.currentNotebook) return;
-
-        // Get fresh counts
-        const [sources, notes] = await Promise.all([
-            this.api(`/notebooks/${this.currentNotebook.id}/sources`),
-            this.api(`/notebooks/${this.currentNotebook.id}/notes`)
-        ]);
-
-        // Find and update the notebook card in the left panel
-        const notebookCard = document.querySelector(`.notebook-item[data-id="${this.currentNotebook.id}"]`);
-        if (notebookCard) {
-            notebookCard.querySelector('.notebook-sources').textContent = `${sources.length} sources`;
-            notebookCard.querySelector('.notebook-notes').textContent = `${notes.length} notes`;
+            this.showError(translations[this.language].error);
         }
     }
 
@@ -555,8 +542,8 @@ class OpenNotebook {
                             <path d="M12 4 L36 4 L40 8 L40 44 L12 44 Z"/>
                             <polyline points="36,4 36,8 40,8"/>
                         </svg>
-                        <p>No notes generated</p>
-                        <p class="empty-hint">Use transformations to create notes from sources</p>
+                        <p>${translations[this.language].noNotes}</p>
+                        <p class="empty-hint">${translations[this.language].useTransformations}</p>
                     </div>
                 `;
                 return;
@@ -584,7 +571,7 @@ class OpenNotebook {
 
                 item.querySelector('.note-preview').textContent = plainText;
                 item.querySelector('.note-date').textContent = this.formatDate(note.created_at);
-                item.querySelector('.note-sources').textContent = `${note.source_ids?.length || 0} sources`;
+                item.querySelector('.note-sources').textContent = `${note.source_ids?.length || 0} ${translations[this.language].sourcesStats}`;
 
                 item.querySelector('.btn-delete-note').addEventListener('click', () => {
                     this.deleteNote(note.id);
@@ -655,8 +642,9 @@ class OpenNotebook {
                     copyBtn.innerHTML = originalHTML;
                     copyBtn.classList.remove('copied');
                 }, 2000);
+                this.setStatus(translations[this.language].copied);
             } catch (err) {
-                this.showError('Failed to copy');
+                this.showError(translations[this.language].failedCopy);
             }
         });
 
@@ -674,20 +662,20 @@ class OpenNotebook {
             // Update notebook card counts in left panel
             await this.updateCurrentNotebookCounts();
         } catch (error) {
-            this.showError('Failed to delete note');
+            this.showError(translations[this.language].error);
         }
     }
 
     // Transform Methods
     async handleTransform(type, element) {
         if (!this.currentNotebook) {
-            this.showError('Please select a notebook first');
+            this.showError(translations[this.language].pleaseSelectNotebook);
             return;
         }
 
         const sources = await this.api(`/notebooks/${this.currentNotebook.id}/sources`);
         if (sources.length === 0) {
-            this.showError('Please add sources first');
+            this.showError(translations[this.language].pleaseAddSources);
             return;
         }
 
@@ -710,9 +698,9 @@ class OpenNotebook {
                         <path d="M7 22v-4.172a2 2 0 0 1 .586-1.414L12 12l-4.414-4.414A2 2 0 0 1 7 6.172V2"/>
                     </svg>
                 `;
-                element.querySelector('.transform-name').textContent = 'Generating...';
+                element.querySelector('.transform-name').textContent = translations[this.language].generating;
             } else {
-                element.textContent = 'Generating...';
+                element.textContent = translations[this.language].generating;
             }
         }
 
@@ -724,7 +712,7 @@ class OpenNotebook {
                     prompt: customPrompt || undefined,
                     length: 'medium',
                     format: 'markdown',
-                    language: 'en',
+                    language: this.language,
                 }),
             });
 
@@ -732,7 +720,7 @@ class OpenNotebook {
                 element.classList.remove('loading');
                 element.disabled = false;
                 element.querySelector('.transform-icon').innerHTML = originalIcon;
-                element.querySelector('.transform-name').textContent = element.querySelector('.transform-name').textContent.replace('Generating...', '');
+                element.querySelector('.transform-name').textContent = element.querySelector('.transform-name').textContent.replace(translations[this.language].generating, '');
             }
 
             await this.loadNotes();
@@ -746,7 +734,7 @@ class OpenNotebook {
                 element.classList.remove('loading');
                 element.disabled = false;
                 element.querySelector('.transform-icon').innerHTML = originalIcon;
-                element.querySelector('.transform-name').textContent = element.querySelector('.transform-name').textContent.replace('Generating...', '');
+                element.querySelector('.transform-name').textContent = element.querySelector('.transform-name').textContent.replace(translations[this.language].generating, '');
             }
             this.showError(error.message);
         }
@@ -767,8 +755,8 @@ class OpenNotebook {
                         <circle cx="20" cy="12" r="6"/>
                         <path d="M8 38 C8 28 14 22 20 22 C26 22 32 28 32 38"/>
                     </svg>
-                    <h3>Chat with your sources</h3>
-                    <p>Ask questions about the content in your notebook</p>
+                    <h3>${translations[this.language].chatWithSources}</h3>
+                    <p>${translations[this.language].askQuestions}</p>
                 </div>
             `;
 
@@ -782,7 +770,7 @@ class OpenNotebook {
         e.preventDefault();
 
         if (!this.currentNotebook) {
-            this.showError('Please select a notebook first');
+            this.showError(translations[this.language].pleaseSelectNotebook);
             return;
         }
 
@@ -797,11 +785,11 @@ class OpenNotebook {
 
         const sources = await this.api(`/notebooks/${this.currentNotebook.id}/sources`);
         if (sources.length === 0) {
-            this.addMessage('assistant', 'Please add some sources to your notebook first.');
+            this.addMessage('assistant', translations[this.language].pleaseAddSources);
             return;
         }
 
-        this.setStatus('Thinking...');
+        this.setStatus(translations[this.language].thinking);
 
         try {
             const response = await this.api(`/notebooks/${this.currentNotebook.id}/chat`, {
@@ -809,15 +797,16 @@ class OpenNotebook {
                 body: JSON.stringify({
                     message: message,
                     session_id: this.currentChatSession || undefined,
+                    language: this.language,
                 }),
             });
 
             this.addMessage('assistant', response.message, response.sources);
             this.currentChatSession = response.session_id;
-            this.setStatus('Ready');
+            this.setStatus(translations[this.language].ready);
         } catch (error) {
-            this.addMessage('assistant', `Error: ${error.message}`);
-            this.setStatus('Error');
+            this.addMessage('assistant', `${translations[this.language].error}: ${error.message}`);
+            this.setStatus(translations[this.language].error);
         }
     }
 
@@ -864,8 +853,8 @@ class OpenNotebook {
         this.hideLoading();
     }
 
-    showLoading(text = 'Loading...') {
-        document.getElementById('loadingText').textContent = text;
+    showLoading(text) {
+        document.getElementById('loadingText').textContent = text || translations[this.language].processing;
         document.getElementById('loadingOverlay').classList.add('active');
     }
 
@@ -887,7 +876,7 @@ class OpenNotebook {
     }
 
     showError(message) {
-        this.setStatus(`Error: ${message}`);
+        this.setStatus(`${translations[this.language].error}: ${message}`);
 
         // Show toast
         const toast = document.createElement('div');
@@ -918,13 +907,20 @@ class OpenNotebook {
     updateFooter() {
         const sourceCount = document.querySelectorAll('.source-card').length;
         const noteCount = document.querySelectorAll('.note-item').length;
-        document.getElementById('footerStats').textContent = `${sourceCount} sources · ${noteCount} notes`;
+        document.getElementById('footerStats').textContent = `${sourceCount} ${translations[this.language].sourcesStats} · ${noteCount} ${translations[this.language].notesStats}`;
     }
 
     formatDate(dateString) {
         const date = new Date(dateString);
         const now = new Date();
         const diff = now - date;
+
+        if (this.language === 'zh') {
+            if (diff < 60000) return '刚刚';
+            if (diff < 3600000) return `${Math.floor(diff / 60000)}分钟前`;
+            if (diff < 86400000) return `${Math.floor(diff / 3600000)}小时前`;
+            return date.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' });
+        }
 
         if (diff < 60000) return 'Just now';
         if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;

@@ -117,6 +117,126 @@ func (a *Agent) GenerateTransformation(ctx context.Context, req *TransformationR
 
 // getTransformationPrompt returns the prompt template for each transformation type
 func (a *Agent) getTransformationPrompt(req *TransformationRequest) string {
+	if req.Language == "zh" {
+		switch req.Type {
+		case "summary":
+			return `你是一个擅长创建综合摘要的专家。请根据以下来源，以{format}格式创建一个{length}摘要。
+
+来源：
+{sources}
+
+请提供一个结构良好的摘要，捕捉来源中的关键信息、主要主题和重要细节。`
+
+		case "faq":
+			return `你是一个擅长创建常见问题解答（FAQ）文档的专家。请根据以下来源，以{format}格式生成一个全面的FAQ。
+
+来源：
+{sources}
+
+创建10-15个常见问题及其详细解答，涵盖来源中的主要主题和信息。`
+
+		case "study_guide":
+			return `你是一个教育专家。请根据以下来源，以{format}格式创建一个全面的学习指南。
+
+来源：
+{sources}
+
+学习指南应包括：
+1. 学习目标
+2. 关键概念和定义
+3. 重要主题和议题
+4. 学习问题和练习
+5. 要点总结
+
+请针对{length}的学习课程进行格式化。`
+
+		case "outline":
+			return `你是一个擅长创建结构化大纲的专家。请根据以下来源，以{format}格式创建一个详细的层级大纲。
+
+来源：
+{sources}
+
+大纲应：
+- 使用适当的层级结构（I, A, 1, a）
+- 涵盖所有主要主题和子主题
+- 包含主要部分的简要说明
+- 详细程度为{length}`
+
+		case "podcast":
+			return `你是一个播客脚本编剧。请根据以下来源创建一个引人入胜的播客脚本。
+
+来源：
+{sources}
+
+脚本应：
+- 具有对话性和吸引力
+- 涵盖来源中的主要主题
+- 包括两位主持人讨论材料
+- 口语时长约为10-15分钟
+- 包含自然的过渡和提问
+- 有清晰的开场白和结束语
+
+请将其格式化为带有演讲者标签（主持人1，主持人2）和[括号]中舞台指示的播客脚本。`
+
+		case "timeline":
+			return `你是一个擅长创建按时间顺序排列的时间线的专家。请根据以下来源，以{format}格式创建一个时间线。
+
+来源：
+{sources}
+
+按时间顺序提取和组织事件，包括：
+- 日期或时间段
+- 事件描述
+- 涉及的关键人物
+- 每个事件的重要性`
+
+		case "glossary":
+			return `你是一个擅长创建术语表的专家。请根据以下来源，以{format}格式创建一个全面的术语表。
+
+来源：
+{sources}
+
+包括：
+- 重要术语和概念
+- 清晰简洁的定义
+- 来源中的上下文
+- 相关术语之间的交叉引用`
+
+		case "quiz":
+			return `你是一个创建评估材料的教育家。请根据以下来源，以{format}格式创建一个测验。
+
+来源：
+{sources}
+
+测验应包括：
+- 混合题型（多项选择、判断正误、简答）
+- 不同难度的问题
+- 答案
+- 测试理解力而非仅仅是记忆力的问题
+
+创建一个包含10-20个问题的{length}测验。`
+
+		case "custom":
+			return `你是一个有用的助手。根据以下来源和自定义请求，生成请求的内容。
+
+来源：
+{sources}
+
+自定义请求：
+{prompt}
+
+请以{format}格式生成内容，保持{length}。`
+
+		default:
+			return `你是一个有用的助手。根据以下来源，以{format}格式提供一个{type}。
+
+来源：
+{sources}
+
+生成{length}内容。`
+		}
+	}
+
 	switch req.Type {
 	case "summary":
 		return `You are an expert at creating comprehensive summaries. Based on the following sources, create a {length} summary in {format} format.
@@ -238,7 +358,7 @@ Generate {length} content.`
 }
 
 // Chat performs a chat query with RAG
-func (a *Agent) Chat(ctx context.Context, notebookID, message string, history []ChatMessage) (*ChatResponse, error) {
+func (a *Agent) Chat(ctx context.Context, notebookID, message string, history []ChatMessage, language string) (*ChatResponse, error) {
 	// Perform similarity search to find relevant sources
 	docs, err := a.vectorStore.SimilaritySearch(ctx, message, a.cfg.MaxSources)
 	if err != nil {
@@ -248,11 +368,21 @@ func (a *Agent) Chat(ctx context.Context, notebookID, message string, history []
 	// Build context from retrieved documents
 	var contextBuilder strings.Builder
 	if len(docs) > 0 {
-		contextBuilder.WriteString("Relevant information from sources:\n\n")
-		for i, doc := range docs {
-			contextBuilder.WriteString(fmt.Sprintf("[Source %d] %s\n", i+1, doc.PageContent))
-			if source, ok := doc.Metadata["source"].(string); ok {
-				contextBuilder.WriteString(fmt.Sprintf("Source: %s\n\n", source))
+		if language == "zh" {
+			contextBuilder.WriteString("来源中的相关信息：\n\n")
+			for i, doc := range docs {
+				contextBuilder.WriteString(fmt.Sprintf("[来源 %d] %s\n", i+1, doc.PageContent))
+				if source, ok := doc.Metadata["source"].(string); ok {
+					contextBuilder.WriteString(fmt.Sprintf("来源: %s\n\n", source))
+				}
+			}
+		} else {
+			contextBuilder.WriteString("Relevant information from sources:\n\n")
+			for i, doc := range docs {
+				contextBuilder.WriteString(fmt.Sprintf("[Source %d] %s\n", i+1, doc.PageContent))
+				if source, ok := doc.Metadata["source"].(string); ok {
+					contextBuilder.WriteString(fmt.Sprintf("Source: %s\n\n", source))
+				}
 			}
 		}
 	}
@@ -271,8 +401,7 @@ func (a *Agent) Chat(ctx context.Context, notebookID, message string, history []
 	}
 
 	// Create RAG prompt using f-string format
-	promptTemplate := prompts.NewPromptTemplate(
-		`You are a helpful AI assistant for a notebook application. Answer the user's question based on the provided context and chat history. If the context doesn't contain enough information, say so and provide a general response.
+	systemPrompt := `You are a helpful AI assistant for a notebook application. Answer the user's question based on the provided context and chat history. If the context doesn't contain enough information, say so and provide a general response.
 
 Chat History:
 {history}
@@ -282,7 +411,24 @@ Context:
 
 User Question: {question}
 
-Provide a helpful, accurate response. When referencing information from sources, mention which source it came from.`,
+Provide a helpful, accurate response. When referencing information from sources, mention which source it came from.`
+
+	if language == "zh" {
+		systemPrompt = `你是一个笔记本应用程序的有用人工智能助手。根据提供的上下文和聊天历史记录回答用户的问题。如果上下文中没有足够的信息，请说明情况并提供一般性的回答。
+
+聊天历史记录：
+{history}
+
+上下文：
+{context}
+
+用户问题：{question}
+
+请提供有用的、准确的回答。当引用来源中的信息时，请提及信息来自哪个来源。`
+	}
+
+	promptTemplate := prompts.NewPromptTemplate(
+		systemPrompt,
 		[]string{"history", "context", "question"},
 	)
 	promptTemplate.TemplateFormat = prompts.TemplateFormatFString
