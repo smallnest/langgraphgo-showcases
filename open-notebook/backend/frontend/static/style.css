@@ -215,16 +215,51 @@ body {
 
 .main-grid {
     display: grid;
-    grid-template-columns: 240px 1fr 360px;
+    grid-template-columns: var(--left-width, 240px) 4px 1fr 4px var(--right-width, 360px);
     flex: 1;
     overflow: hidden;
-    gap: 1px;
     background: var(--border-color);
     transition: grid-template-columns var(--transition-normal);
 }
 
 .main-grid.right-collapsed {
-    grid-template-columns: 240px 1fr 64px;
+    grid-template-columns: var(--left-width, 240px) 4px 1fr 0px 64px;
+}
+
+.resizer {
+    background: var(--bg-primary);
+    cursor: col-resize;
+    transition: background var(--transition-fast);
+    position: relative;
+    z-index: 20;
+    border-left: 1px solid var(--border-color);
+    border-right: 1px solid var(--border-color);
+}
+
+.resizer:hover, .resizer.dragging {
+    background: var(--accent-primary);
+    border-color: var(--accent-primary);
+}
+
+.resizer::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: -4px;
+    right: -4px;
+}
+
+.main-grid.right-collapsed #resizerRight {
+    display: none;
+}
+
+.chat-messages-wrapper {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    background: var(--bg-primary);
 }
 
 .btn-toggle-side {
@@ -249,12 +284,25 @@ body {
 }
 
 .main-grid.right-collapsed .btn-toggle-side {
-    transform: rotate(180deg);
+    transform: rotate(180deg) !important;
+}
+
+.main-grid.right-collapsed .panel-right {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    background: var(--bg-primary);
+    overflow: visible;
+    width: 64px !important;
+    padding: 0 !important;
 }
 
 .main-grid.right-collapsed .studio-header {
-    justify-content: center;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
     padding: var(--space-md) 0;
+    width: 100% !important;
 }
 
 .main-grid.right-collapsed .panel-right .studio-header .panel-title,
@@ -264,28 +312,26 @@ body {
     display: none;
 }
 
-.main-grid.right-collapsed .panel-right {
-    align-items: center;
-    background: var(--bg-primary);
-}
-
 .main-grid.right-collapsed .transform-grid {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
     gap: var(--space-md);
-    padding: 0;
-    width: 100%;
+    padding: 0 !important;
+    width: 100% !important;
 }
 
 .main-grid.right-collapsed .transform-card {
-    width: 44px;
-    height: 44px;
-    padding: 0;
-    justify-content: center;
-    align-items: center;
-    border-radius: 50%;
-    background: transparent;
+    width: 44px !important;
+    height: 44px !important;
+    padding: 0 !important;
+    margin: 0 auto !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    border-radius: 50% !important;
+    background: transparent !important;
 }
 
 .main-grid.right-collapsed .transform-icon {
@@ -1845,6 +1891,10 @@ body {
     letter-spacing: 0.1em;
 }
 
+.hidden {
+    display: none !important;
+}
+
 /* Scrollbar */
 ::-webkit-scrollbar {
     width: 8px;
@@ -2037,56 +2087,4 @@ body {
 .current-notebook-info h2 {
     font-size: 1.1rem;
     font-weight: 600;
-}
-
-/* Animations */
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-    }
-    to {
-        opacity: 1;
-    }
-}
-
-@keyframes slideIn {
-    from {
-        transform: translateX(-8px);
-        opacity: 0;
-    }
-    to {
-        transform: translateX(0);
-        opacity: 1;
-    }
-}
-
-/* Utility */
-.font-mono {
-    font-family: var(--font-mono);
-}
-
-.hidden {
-    display: none !important;
-}
-
-/* Responsive */
-@media (max-width: 1200px) {
-    .main-grid {
-        grid-template-columns: 240px 1fr 320px;
-    }
-}
-
-@media (max-width: 900px) {
-    .main-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .panel-left,
-    .panel-right {
-        display: none;
-    }
-
-    .panel-center {
-        border-right: none;
-    }
 }

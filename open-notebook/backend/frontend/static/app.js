@@ -14,7 +14,58 @@ class OpenNotebook {
 
     async init() {
         this.bindEvents();
+        this.initResizers();
+        this.switchView('landing');
         await this.loadNotebooks();
+    }
+
+    initResizers() {
+        const resizerLeft = document.getElementById('resizerLeft');
+        const resizerRight = document.getElementById('resizerRight');
+        const grid = document.querySelector('.main-grid');
+
+        if (!resizerLeft || !resizerRight) return;
+
+        let isDragging = false;
+        let currentResizer = null;
+
+        const startDragging = (e, resizer) => {
+            isDragging = true;
+            currentResizer = resizer;
+            resizer.classList.add('dragging');
+            document.body.style.cursor = 'col-resize';
+            e.preventDefault();
+        };
+
+        const stopDragging = () => {
+            if (!isDragging) return;
+            isDragging = false;
+            currentResizer.classList.remove('dragging');
+            document.body.style.cursor = '';
+            currentResizer = null;
+        };
+
+        const drag = (e) => {
+            if (!isDragging) return;
+
+            const gridRect = grid.getBoundingClientRect();
+            if (currentResizer === resizerLeft) {
+                const width = e.clientX - gridRect.left;
+                if (width > 150 && width < 600) {
+                    grid.style.setProperty('--left-width', `${width}px`);
+                }
+            } else if (currentResizer === resizerRight) {
+                const width = gridRect.right - e.clientX;
+                if (width > 200 && width < 600) {
+                    grid.style.setProperty('--right-width', `${width}px`);
+                }
+            }
+        };
+
+        resizerLeft.addEventListener('mousedown', (e) => startDragging(e, resizerLeft));
+        resizerRight.addEventListener('mousedown', (e) => startDragging(e, resizerRight));
+        document.addEventListener('mousemove', drag);
+        document.addEventListener('mouseup', stopDragging);
     }
 
     bindEvents() {
