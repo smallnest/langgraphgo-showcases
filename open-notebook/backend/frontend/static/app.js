@@ -623,13 +623,21 @@ class OpenNotebook {
                             <path d="M7 3 L7 1 C7 1 13 1 13 1 L13 13 L11 13"/>
                         </svg>
                     </button>
-                    <button class="btn-close" onclick="this.closest('.modal').remove()">×</button>
+                    <button class="btn-close">×</button>
                 </div>
             </div>
             <div class="modal-body" style="max-height: calc(85vh - 120px); overflow-y: auto;">
                 <div class="markdown-content">${renderedContent}</div>
             </div>
         `;
+
+        // Add close button functionality
+        const closeBtn = modal.querySelector('.btn-close');
+        closeBtn.addEventListener('click', () => {
+            const overlay = document.getElementById('modalOverlay');
+            overlay.classList.remove('active');
+            overlay.innerHTML = '';
+        });
 
         // Add copy button functionality
         const copyBtn = modal.querySelector('.btn-copy-note');

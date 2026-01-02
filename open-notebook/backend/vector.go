@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -42,14 +43,27 @@ func NewVectorStore(cfg Config) (*VectorStore, error) {
 func (vs *VectorStore) IngestDocuments(ctx context.Context, paths []string) error {
 	for _, path := range paths {
 		fmt.Printf("[VectorStore] Loading file: %s\n", path)
-		// Read file content
-		content, err := os.ReadFile(path)
+
+		var content string
+		var err error
+
+		// Check if file needs markitdown conversion
+		ext := strings.ToLower(filepath.Ext(path))
+		if vs.cfg.EnableMarkitdown && vs.needsMarkitdown(ext) {
+			content, err = vs.convertWithMarkitdown(path)
+		} else {
+			// Direct read for text files or when markitdown is disabled
+			var bytes []byte
+			bytes, err = os.ReadFile(path)
+			content = string(bytes)
+		}
+
 		if err != nil {
 			return fmt.Errorf("failed to read file %s: %w", path, err)
 		}
 
 		fmt.Printf("[VectorStore] File loaded, size: %d bytes\n", len(content))
-		if err := vs.IngestText(ctx, filepath.Base(path), string(content)); err != nil {
+		if err := vs.IngestText(ctx, filepath.Base(path), content); err != nil {
 			return err
 		}
 	}
@@ -289,4 +303,46 @@ func (vs *VectorStore) GetStats(ctx context.Context) (VectorStats, error) {
 	}
 
 	return stats, nil
+}
+
+// needsMarkitdown checks if a file extension requires markitdown conversion
+func (vs *VectorStore) needsMarkitdown(ext string) bool {
+	markitdownExts := map[string]bool{
+		".pdf":  true,
+		".docx": true,
+		".doc":  true,
+		".pptx": true,
+		".ppt":  true,
+		".xlsx": true,
+		".xls":  true,
+	}
+	return markitdownExts[ext]
+}
+
+// convertWithMarkitdown converts a document to Markdown using the markitdown CLI tool
+func (vs *VectorStore) convertWithMarkitdown(filePath string) (string, error) {
+	fmt.Printf("[VectorStore] Converting with markitdown: %s\n", filePath)
+
+	// Create temporary output file
+	tmpFile := filepath.Join(os.TempDir(), fmt.Sprintf("markitdown_%s.md", filepath.Base(filePath)))
+
+	// Run markitdown command
+	cmd := exec.Command("markitdown", filePath, "-o", tmpFile)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		fmt.Printf("[VectorStore] markitdown error: %s\n", string(output))
+		return "", fmt.Errorf("markitdown conversion failed: %w, output: %s", err, string(output))
+	}
+
+	// Read the converted markdown content
+	content, err := os.ReadFile(tmpFile)
+	if err != nil {
+		return "", fmt.Errorf("failed to read markitdown output: %w", err)
+	}
+
+	// Clean up temporary file
+	os.Remove(tmpFile)
+
+	fmt.Printf("[VectorStore] markitdown conversion successful, output size: %d bytes\n", len(content))
+	return string(content), nil
 }

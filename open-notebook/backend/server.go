@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 //go:embed frontend/index.html frontend/static
@@ -307,24 +308,40 @@ func (s *Server) handleUpload(c *gin.Context) {
 		return
 	}
 
+	// Generate unique filename to avoid conflicts
+	ext := filepath.Ext(file.Filename)
+	baseName := file.Filename[:len(file.Filename)-len(ext)]
+	uniqueFileName := fmt.Sprintf("%s_%s%s", baseName, uuid.New().String()[:8], ext)
+	tempPath := fmt.Sprintf("./data/uploads/%s", uniqueFileName)
+
+	// Ensure uploads directory exists
+	if err := os.MkdirAll("./data/uploads", 0755); err != nil {
+		log.Printf("Failed to create uploads directory: %v", err)
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Failed to create uploads directory"})
+		return
+	}
+
 	// Save file
-	tempPath := fmt.Sprintf("./data/uploads/%s", file.Filename)
 	if err := c.SaveUploadedFile(file, tempPath); err != nil {
-		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Failed to save file"})
+		log.Printf("Failed to save file: %v", err)
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: fmt.Sprintf("Failed to save file: %v", err)})
 		return
 	}
 
 	// Create source
 	source := &Source{
 		NotebookID: notebookID,
-		Name:       file.Filename,
+		Name:       file.Filename, // Keep original filename for display
 		Type:       "file",
-		FileName:   file.Filename,
+		FileName:   uniqueFileName, // Store unique filename
 		FileSize:   file.Size,
 		Metadata:   map[string]interface{}{"path": tempPath},
 	}
 
 	if err := s.store.CreateSource(ctx, source); err != nil {
+		log.Printf("Failed to create source: %v", err)
+		// Clean up uploaded file on error
+		os.Remove(tempPath)
 		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Failed to create source"})
 		return
 	}
@@ -336,18 +353,20 @@ func (s *Server) handleUpload(c *gin.Context) {
 
 	if err := s.vectorStore.IngestDocuments(ctx, []string{tempPath}); err != nil {
 		log.Printf("Failed to ingest document: %v", err)
+		// Don't fail the request, just log the error
+		source.Content = fmt.Sprintf("Failed to ingest: %v", err)
+	} else {
+		// Get updated stats to calculate chunk count
+		stats, _ = s.vectorStore.GetStats(ctx)
+		chunkCount := stats.TotalDocuments - totalDocsBefore
+
+		// Update source with chunk count
+		source.ChunkCount = chunkCount
+		source.Content = fmt.Sprintf("Ingested %d chunks", chunkCount)
+
+		// Update in database
+		s.store.UpdateSourceChunkCount(ctx, source.ID, chunkCount)
 	}
-
-	// Get updated stats to calculate chunk count
-	stats, _ = s.vectorStore.GetStats(ctx)
-	chunkCount := stats.TotalDocuments - totalDocsBefore
-
-	// Update source with chunk count
-	source.ChunkCount = chunkCount
-	source.Content = fmt.Sprintf("Ingested %d chunks", chunkCount)
-
-	// Update in database
-	s.store.UpdateSourceChunkCount(ctx, source.ID, chunkCount)
 
 	c.JSON(http.StatusCreated, source)
 }

@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+
+	"github.com/joho/godotenv"
 )
 
 // Config holds the application configuration
@@ -42,13 +44,28 @@ type Config struct {
 	EnablePodcast      bool
 	PodcastVoice       string
 
+	// Document conversion
+	EnableMarkitdown   bool
+
 	// LangSmith tracing (optional)
 	LangChainAPIKey    string
 	LangChainProject   string
 }
 
+// loadEnv loads .env file if it exists (ignoring errors if file not found)
+func loadEnv() {
+	// Try to load .env file from current directory
+	_ = godotenv.Load()
+
+	// Also try to load from .env.local for local overrides
+	_ = godotenv.Load(".env.local")
+}
+
 // LoadConfig loads configuration from environment variables with defaults
 func LoadConfig() Config {
+	// Load .env file first (if exists)
+	loadEnv()
+
 	cfg := Config{
 		ServerHost:       getEnv("SERVER_HOST", "0.0.0.0"),
 		ServerPort:       getEnv("SERVER_PORT", "8080"),
@@ -72,6 +89,7 @@ func LoadConfig() Config {
 		ChunkOverlap:     getEnvInt("CHUNK_OVERLAP", 200),
 		EnablePodcast:    getEnvBool("ENABLE_PODCAST", true),
 		PodcastVoice:     getEnv("PODCAST_VOICE", "alloy"),
+		EnableMarkitdown: getEnvBool("ENABLE_MARKITDOWN", true),
 		LangChainAPIKey:  getEnv("LANGCHAIN_API_KEY", ""),
 		LangChainProject: getEnv("LANGCHAIN_PROJECT", "open-notebook"),
 	}

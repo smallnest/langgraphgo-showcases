@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	_ "github.com/mattn/go-sqlite3"
+	_ "modernc.org/sqlite"
 )
 
 // Store handles data persistence for notebooks, sources, notes, and chat sessions
@@ -26,7 +26,7 @@ func NewStore(cfg Config) (*Store, error) {
 		return nil, fmt.Errorf("failed to create data directory: %w", err)
 	}
 
-	db, err := sql.Open("sqlite3", cfg.StorePath)
+	db, err := sql.Open("sqlite", cfg.StorePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
