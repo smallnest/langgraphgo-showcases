@@ -1,7 +1,3 @@
-// ============================================
-// OPEN NOTEBOOK - 应用逻辑 (中文版)
-// ============================================ 
-
 class OpenNotebook {
     constructor() {
         this.notebooks = [];
@@ -69,37 +65,53 @@ class OpenNotebook {
     }
 
     bindEvents() {
-        // 笔记本操作
-        document.getElementById('btnNewNotebook').addEventListener('click', () => this.showNewNotebookModal());
-        document.getElementById('btnNewNotebookLanding').addEventListener('click', () => this.showNewNotebookModal());
-        document.getElementById('btnBackToList').addEventListener('click', () => this.switchView('landing'));
-        document.getElementById('btnToggleRight').addEventListener('click', () => this.toggleRightPanel());
+        const safeAddEventListener = (id, event, handler) => {
+            const el = document.getElementById(id);
+            if (el) el.addEventListener(event, handler);
+        };
+
+        safeAddEventListener('btnNewNotebook', 'click', () => this.showNewNotebookModal());
+        safeAddEventListener('btnNewNotebookLanding', 'click', () => this.showNewNotebookModal());
+        safeAddEventListener('btnBackToList', 'click', () => this.switchView('landing'));
+        safeAddEventListener('btnToggleRight', 'click', () => this.toggleRightPanel());
+        safeAddEventListener('btnToggleLeft', 'click', () => this.toggleLeftPanel());
         
-        document.getElementById('newNotebookForm').addEventListener('submit', (e) => this.handleCreateNotebook(e));
-        document.getElementById('btnCloseNotebookModal').addEventListener('click', () => this.closeModals());
-        document.getElementById('btnCancelNotebook').addEventListener('click', () => this.closeModals());
+        safeAddEventListener('newNotebookForm', 'submit', (e) => this.handleCreateNotebook(e));
+        safeAddEventListener('btnCloseNotebookModal', 'click', () => this.closeModals());
+        safeAddEventListener('btnCancelNotebook', 'click', () => this.closeModals());
 
-        // 来源操作
-        document.getElementById('btnAddSource').addEventListener('click', () => this.showAddSourceModal());
-        document.getElementById('btnCloseSourceModal').addEventListener('click', () => this.closeModals());
-        document.getElementById('dropZone').addEventListener('click', () => document.getElementById('fileInput').click());
-        document.getElementById('fileInput').addEventListener('change', (e) => this.handleFileUpload(e));
-        document.getElementById('textSourceForm').addEventListener('submit', (e) => this.handleTextSource(e));
-        document.getElementById('urlSourceForm').addEventListener('submit', (e) => this.handleURLSource(e));
-        document.getElementById('btnCancelText').addEventListener('click', () => this.closeModals());
-        document.getElementById('btnCancelURL').addEventListener('click', () => this.closeModals());
+        safeAddEventListener('btnAddSource', 'click', () => this.showAddSourceModal());
+        safeAddEventListener('btnCloseSourceModal', 'click', () => this.closeModals());
+        const dropZone = document.getElementById('dropZone');
+        if (dropZone) {
+            dropZone.addEventListener('click', () => document.getElementById('fileInput').click());
+            dropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropZone.classList.add('drag-over');
+            });
+            dropZone.addEventListener('dragleave', () => {
+                dropZone.classList.remove('drag-over');
+            });
+            dropZone.addEventListener('drop', (e) => this.handleDrop(e));
+        }
+        
+        safeAddEventListener('fileInput', 'change', (e) => this.handleFileUpload(e));
+        safeAddEventListener('textSourceForm', 'submit', (e) => this.handleTextSource(e));
+        safeAddEventListener('urlSourceForm', 'submit', (e) => this.handleURLSource(e));
+        safeAddEventListener('btnCancelText', 'click', () => this.closeModals());
+        safeAddEventListener('btnCancelURL', 'click', () => this.closeModals());
 
-        // 来源标签切换
         document.querySelectorAll('.source-tab').forEach(tab => {
             tab.addEventListener('click', () => {
                 document.querySelectorAll('.source-tab').forEach(t => t.classList.remove('active'));
                 document.querySelectorAll('.source-content').forEach(c => c.classList.remove('active'));
                 tab.classList.add('active');
-                document.getElementById(`source${tab.dataset.source.charAt(0).toUpperCase() + tab.dataset.source.slice(1)}`).classList.add('active');
+                const targetId = `source${tab.dataset.source.charAt(0).toUpperCase() + tab.dataset.source.slice(1)}`;
+                const target = document.getElementById(targetId);
+                if (target) target.classList.add('active');
             });
         });
 
-        // 转换选项
         document.querySelectorAll('.transform-card').forEach(card => {
             card.addEventListener('click', (e) => {
                 e.preventDefault();
@@ -107,30 +119,17 @@ class OpenNotebook {
             });
         });
 
-        document.getElementById('btnCustomTransform').addEventListener('click', (e) => {
+        safeAddEventListener('btnCustomTransform', 'click', (e) => {
             this.handleTransform('custom', e.currentTarget);
         });
 
-        // 聊天
-        document.getElementById('chatForm').addEventListener('submit', (e) => this.handleChat(e));
+        safeAddEventListener('chatForm', 'submit', (e) => this.handleChat(e));
 
-        // 模态框遮罩
-        document.getElementById('modalOverlay').addEventListener('click', (e) => {
+        safeAddEventListener('modalOverlay', 'click', (e) => {
             if (e.target.id === 'modalOverlay') {
                 this.closeModals();
             }
         });
-
-        // 拖拽上传
-        const dropZone = document.getElementById('dropZone');
-        dropZone.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            dropZone.classList.add('drag-over');
-        });
-        dropZone.addEventListener('dragleave', () => {
-            dropZone.classList.remove('drag-over');
-        });
-        dropZone.addEventListener('drop', (e) => this.handleDrop(e));
     }
 
     // API 方法
@@ -260,6 +259,11 @@ class OpenNotebook {
     toggleRightPanel() {
         const grid = document.querySelector('.main-grid');
         grid.classList.toggle('right-collapsed');
+    }
+
+    toggleLeftPanel() {
+        const grid = document.querySelector('.main-grid');
+        grid.classList.toggle('left-collapsed');
     }
 
     async selectNotebook(id) {
@@ -840,6 +844,9 @@ class OpenNotebook {
         const message = clone.querySelector('.chat-message');
 
         message.dataset.role = role;
+        
+        const avatar = message.querySelector('.message-avatar');
+        avatar.textContent = role === 'assistant' ? 'AI' : '你';
 
         const messageText = message.querySelector('.message-text');
         if (role === 'assistant') {

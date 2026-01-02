@@ -101,10 +101,10 @@ body {
 
 /* Layout */
 .app-container {
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-    overflow: hidden;
+    display: flex !important;
+    flex-direction: column !important;
+    height: 100vh !important;
+    overflow: hidden !important;
 }
 
 /* Header */
@@ -189,18 +189,26 @@ body {
 /* Main Grid */
 .main-grid {
     display: grid;
-    grid-template-columns: 240px 1fr 360px;
+    grid-template-columns: var(--left-width, 240px) 4px 1fr 4px var(--right-width, 360px);
     flex: 1;
+    width: 100%;
+    min-height: 0; /* Allow grid to shrink */
     overflow: hidden;
-    gap: 1px;
     background: var(--border-color);
-    transition: grid-template-columns var(--transition-normal);
+    /* Remove transition to fix disappearing panel issue */
+    gap: 0;
 }
 
-.panel-right {
-    background: var(--bg-secondary);
-    position: relative;
-    transition: all var(--transition-normal);
+.main-grid.left-collapsed {
+    grid-template-columns: 64px 0px 1fr 4px var(--right-width, 360px);
+}
+
+.main-grid.right-collapsed {
+    grid-template-columns: var(--left-width, 240px) 4px 1fr 0px 64px;
+}
+
+.main-grid.left-collapsed.right-collapsed {
+    grid-template-columns: 64px 0px 1fr 0px 64px;
 }
 
 .studio-header {
@@ -213,17 +221,77 @@ body {
     min-height: 60px;
 }
 
-.main-grid {
-    display: grid;
-    grid-template-columns: var(--left-width, 240px) 4px 1fr 4px var(--right-width, 360px);
-    flex: 1;
-    overflow: hidden;
-    background: var(--border-color);
-    transition: grid-template-columns var(--transition-normal);
+/* Left Panel Collapsed State Fixes */
+.main-grid.left-collapsed .panel-left {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    width: 64px !important;
+    min-width: 64px !important;
+    padding: 0 !important;
+    background: var(--bg-primary) !important;
+    border-right: 1px solid var(--border-color);
+    overflow: visible;
 }
 
-.main-grid.right-collapsed {
-    grid-template-columns: var(--left-width, 240px) 4px 1fr 0px 64px;
+.main-grid.left-collapsed .panel-left .panel-header {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    padding: var(--space-md) 0 !important;
+    width: 100% !important;
+    border-bottom: none !important;
+    min-height: 60px;
+}
+
+.main-grid.left-collapsed .panel-left .panel-header .panel-title,
+.main-grid.left-collapsed .sources-list-container {
+    display: none !important;
+}
+
+.main-grid.left-collapsed .panel-left .panel-actions {
+    display: flex !important;
+    flex-direction: column !important; /* Toggle button first */
+    align-items: center !important;
+    gap: var(--space-xl) !important;
+    width: 100% !important;
+}
+
+.main-grid.left-collapsed #btnToggleLeft {
+    transform: rotate(180deg) !important;
+    margin: 0 auto !important;
+}
+
+.main-grid.left-collapsed #btnAddSource {
+    width: 36px !important;
+    height: 36px !important;
+    background: #ffffff !important;
+    border-radius: 50% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05) !important;
+    border: 1px solid var(--border-color) !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+}
+
+.main-grid.left-collapsed #btnAddSource:hover {
+    color: var(--accent-primary);
+    border-color: var(--accent-primary);
+}
+
+.main-grid.left-collapsed #resizerLeft {
+    visibility: hidden;
+    pointer-events: none;
+    border: none !important;
+}
+
+.main-grid.right-collapsed #resizerRight {
+    visibility: hidden;
+    pointer-events: none;
+    border: none !important;
 }
 
 .resizer {
@@ -248,10 +316,6 @@ body {
     bottom: 0;
     left: -4px;
     right: -4px;
-}
-
-.main-grid.right-collapsed #resizerRight {
-    display: none;
 }
 
 .chat-messages-wrapper {
@@ -295,6 +359,7 @@ body {
     overflow: visible;
     width: 64px !important;
     padding: 0 !important;
+    border-left: 1px solid var(--border-color); /* Add border when resizer is hidden */
 }
 
 .main-grid.right-collapsed .studio-header {
@@ -493,6 +558,34 @@ body {
 }
 
 .panel-center {
+    background: var(--bg-primary);
+    display: flex;
+    flex-direction: column;
+    min-width: 300px; /* Ensure a minimum width for the chat area */
+    height: 100%;
+    z-index: 1;
+}
+
+.chat-messages-wrapper {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    background: var(--bg-primary);
+    position: relative;
+}
+
+.chat-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--space-lg);
     background: var(--bg-primary);
 }
 
@@ -1275,20 +1368,27 @@ body {
 
 .message-content {
     flex: 1;
-    max-width: 80%;
+    max-width: 85%;
+    display: flex;
+    flex-direction: column;
 }
 
 .chat-message[data-role="user"] .message-content {
-    margin-left: 0;
-    text-align: right;
+    align-items: flex-end;
+}
+
+.chat-message[data-role="assistant"] .message-content {
+    align-items: flex-start;
 }
 
 .message-text {
     font-size: 0.9rem;
-    line-height: 1.6;
+    line-height: 1.5;
     color: var(--text-primary);
-    padding: var(--space-md) var(--space-lg);
+    padding: var(--space-sm) var(--space-md);
     border-radius: var(--radius-lg);
+    width: fit-content;
+    word-break: break-word;
 }
 
 /* Markdown in chat messages */
@@ -2051,7 +2151,9 @@ body {
 .workspace-container {
     display: flex;
     flex-direction: column;
-    height: 100vh;
+    flex: 1 1 0%;
+    min-height: 0;
+    overflow: hidden; /* Prevent pushing footer out */
 }
 
 .workspace-nav {
