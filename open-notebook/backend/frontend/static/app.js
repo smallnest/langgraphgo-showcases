@@ -362,6 +362,28 @@ class OpenNotebook {
         document.getElementById('notebookCount').textContent = this.notebooks.length;
     }
 
+    async selectNotebook(id) {
+        this.currentNotebook = this.notebooks.find(nb => nb.id === id);
+
+        document.querySelectorAll('.notebook-item').forEach(item => {
+            item.classList.toggle('active', item.dataset.id === id);
+        });
+
+        await Promise.all([
+            this.loadSources(),
+            this.loadNotes(),
+            this.loadChatSessions()
+        ]);
+
+        this.setStatus(`Selected: ${this.currentNotebook.name}`);
+    }
+
+    showNewNotebookModal() {
+        document.getElementById('newNotebookModal').classList.add('active');
+        document.getElementById('modalOverlay').classList.add('active');
+        document.querySelector('#newNotebookForm input[name="name"]').focus();
+    }
+
     async updateCurrentNotebookCounts() {
         if (!this.currentNotebook) return;
 
