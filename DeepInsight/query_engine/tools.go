@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/smallnest/langgraphgo/showcases/BettaFish/schema"
+	"github.com/smallnest/langgraphgo/showcases/DeepInsight/schema"
 )
 
 type TavilyResponse struct {
@@ -22,7 +22,7 @@ type TavilyResponse struct {
 		RawContent    string  `json:"raw_content"`
 		PublishedDate string  `json:"published_date"`
 	} `json:"results"`
-	Images []string `json:"images"`
+	Images any `json:"images"` // Can be []string or []object
 }
 
 // SearchOptions holds optional search parameters

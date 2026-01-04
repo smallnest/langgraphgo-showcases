@@ -9,7 +9,12 @@
       "Bash(go vet:*)",
       "Bash(make vet:*)",
       "Bash(cat:*)",
-      "Bash(make check:*)"
+      "Bash(make check:*)",
+      "Bash(tree:*)",
+      "Bash(go run:*)",
+      "Bash(ls:*)",
+      "Bash(go build:*)",
+      "Bash(timeout 60 go run:*)"
     ],
     "deny": [],
     "ask": []

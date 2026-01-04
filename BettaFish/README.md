@@ -2,23 +2,106 @@
 
 This is a **complete replication** of the [BettaFish](https://github.com/666ghj/BettaFish) project in Go, using [langgraphgo](https://github.com/smallnest/langgraphgo) and [langchaingo](https://github.com/tmc/langchaingo).
 
-It implements the full multi-agent architecture for deep public opinion analysis.
+It implements the full multi-agent architecture for deep public opinion analysis, synchronized with the latest upstream Python implementation.
+
+## Latest Updates (2026-01)
+
+### New Features
+- **Enhanced Error Handling**: Added retry mechanism with exponential backoff and JSON repair logic
+- **GraphRAG Foundation**: Added basic structures for knowledge graph and RAG support
+- **Improved Search Tools**: Extended search options with platform-specific parameters
+- **Structured Logging**: New logging utility with execution tracking
+- **Sentiment Analysis Support**: Added sentiment fields to search results
+
+### Synchronized with Upstream
+- Updated prompts to match the latest Python implementation
+- Enhanced search tool descriptions with platform-specific guidance
+- Improved "ground-level" keyword optimization in prompts
 
 ## Features
 
-- **QueryEngine**: 
+- **QueryEngine**:
   - Generates a structured research plan (outline).
   - Performs deep web search using Tavily API.
   - Implements a **Reflection Loop** to iteratively refine search results and summaries.
   - Uses specialized prompts for searching, summarizing, and reflecting.
-- **MediaEngine**: 
+  - Supports 6 search tools: basic_search_news, deep_search_news, search_news_last_24_hours, search_news_last_week, search_images_for_news, search_news_by_date
+
+- **MediaEngine**:
   - Searches for relevant images using Tavily's image search capabilities.
-- **InsightEngine**: 
+
+- **InsightEngine**:
   - (Simulated) Mines internal data for insights.
-- **ForumEngine**: 
+  - Supports sentiment analysis integration.
+
+- **ForumEngine**:
   - Facilitates an LLM-driven discussion between "NewsAgent", "MediaAgent", and "Moderator" to synthesize findings.
-- **ReportEngine**: 
+
+- **ReportEngine**:
   - Compiles all findings into a comprehensive Markdown report.
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                          BettaFish Go                            │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                   │
+│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐     │
+│  │ QueryEngine  │───▶│ MediaEngine  │───▶│ InsightEngine│     │
+│  └──────────────┘    └──────────────┘    └──────────────┘     │
+│         │                                        │            │
+│         ▼                                        ▼            │
+│  ┌──────────────┐                         ┌──────────────┐     │
+│  │ ForumEngine  │◀────────────────────────│  (State)    │     │
+│  └──────────────┘                         └──────────────┘     │
+│         │                                                       │
+│         ▼                                                       │
+│  ┌──────────────┐                                              │
+│  │ ReportEngine │───▶ Final Report                             │
+│  └──────────────┘                                              │
+│                                                                   │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │              GraphRAG Support (Foundation)              │   │
+│  │  • GraphRAGNode, GraphRAGEdge                           │   │
+│  │  • Knowledge graph state management                     │   │
+│  │  • Sentiment analysis integration                        │   │
+│  └─────────────────────────────────────────────────────────┘   │
+│                                                                   │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+## Project Structure
+
+```
+BettaFish/
+├── main.go                 # Entry point
+├── schema/
+│   └── state.go           # State management with GraphRAG support
+├── query_engine/
+│   ├── agent.go           # Query analysis node
+│   ├── prompts.go         # LLM prompts (synced with upstream)
+│   └── tools.go           # Enhanced Tavily search integration
+├── media_engine/
+│   ├── agent.go           # Media search node
+│   └── prompts.go         # Image search prompts
+├── insight_engine/
+│   ├── agent.go           # Insight generation node
+│   └── prompts.go         # Analysis prompts (synced with upstream)
+├── forum_engine/
+│   └── agent.go           # Multi-agent discussion simulation
+├── report_engine/
+│   ├── agent.go           # Report generation node
+│   ├── prompts.go         # Report compilation prompts
+│   └── template.go        # Go template-based Markdown generation
+├── utils/
+│   ├── errors.go          # Enhanced error handling with retry
+│   └── logger.go          # Structured logging with execution tracking
+├── mind_spider/
+│   └── spider.go          # Social media search simulation
+└── sentiment_model/
+    └── model.go           # LLM-based sentiment analysis
+```
 
 ## Prerequisites
 
@@ -73,3 +156,36 @@ export OPENAI_MODEL="llama3.1"  # Specify the model name
 export TAVILY_API_KEY="tvly-..."
 go run showcases/BettaFish/main.go "Your Research Topic"
 ```
+
+## Key Differences from Python Implementation
+
+| Aspect | Python Version | Go Version |
+|--------|----------------|------------|
+| **Framework** | LangGraph (Python) | langgraphgo (Go) |
+| **UI** | Web UI (Flask/Streamlit) | CLI tool |
+| **Database** | Local PostgreSQL/MySQL | Simulated via Tavily API |
+| **Sentiment Analysis** | Local ML models | LLM-based |
+| **Report Format** | HTML/PDF/Markdown | Markdown |
+| **Concurrency** | True async agents | Sequential graph execution |
+| **Deployment** | Docker Compose | Single binary |
+
+## Roadmap
+
+- [ ] Add GraphRAG query engine integration
+- [ ] Implement true concurrent agent execution
+- [ ] Add HTML/PDF report generation
+- [ ] Implement local database support
+- [ ] Add Web UI (using Go web frameworks)
+
+## Contributing
+
+This project is synchronized with the upstream Python BettaFish implementation. When updating:
+
+1. Check the [upstream repository](https://github.com/666ghj/BettaFish) for prompt changes
+2. Update corresponding `prompts.go` files
+3. Ensure error handling follows the new retry mechanism
+4. Test with different LLM providers
+
+## License
+
+This project follows the same license as the upstream BettaFish project (GPL-2.0).

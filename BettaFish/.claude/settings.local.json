@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(tree:*)",
+      "Bash(find:*)",
+      "mcp__fetch__imageFetch",
+      "Bash(curl -s https://raw.githubusercontent.com/666ghj/BettaFish/main/QueryEngine/prompts/prompts.py)",
+      "Bash(curl:*)",
+      "Bash(git clone:*)",
+      "Bash(python3:*)"
+    ]
+  }
+}
