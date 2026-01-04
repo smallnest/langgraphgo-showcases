@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/smallnest/langgraphgo/showcases/DeepInsight/query_engine"
-	"github.com/smallnest/langgraphgo/showcases/DeepInsight/schema"
+	"github.com/smallnest/langgraphgo-showcases/DeepInsight/query_engine"
+	"github.com/smallnest/langgraphgo-showcases/DeepInsight/schema"
 	"github.com/tmc/langchaingo/llms"
 )
 
@@ -62,7 +62,7 @@ func MediaEngineNode(ctx context.Context, state any) (any, error) {
 
 	// 2. Execute search
 	// Use Tavily to search for images and visual content
-	results, err := query_engine.ExecuteSearch(ctx, output.SearchQuery, "search_images_for_news", "", "")
+	results, err := query_engine.ExecuteSearch(ctx, output.SearchQuery, "search_images", "", "")
 	if err != nil {
 		fmt.Printf("MediaEngine: 搜索失败: %v\n", err)
 		return s, nil

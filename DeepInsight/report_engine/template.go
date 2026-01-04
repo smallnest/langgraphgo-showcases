@@ -7,7 +7,7 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/smallnest/langgraphgo/showcases/DeepInsight/schema"
+	"github.com/smallnest/langgraphgo-showcases/DeepInsight/schema"
 )
 
 const reportTemplate = `

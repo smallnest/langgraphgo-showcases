@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/smallnest/langgraphgo/showcases/DeepInsight/schema"
+	"github.com/smallnest/langgraphgo-showcases/DeepInsight/schema"
 )
 
 // ReportEngineNode generates the final report file.
@@ -41,7 +41,15 @@ func ReportEngineNode(ctx context.Context, state any) (any, error) {
 	s.FinalReport = reportContent
 
 	// Save to file
-	filename := fmt.Sprintf("deep_insight_report_%s_%s.md", strings.ReplaceAll(s.Query, " ", "_"), time.Now().Format("20060102_150405"))
+	var filename string
+	if s.OutputFile != "" {
+		// Use specified output file
+		filename = s.OutputFile
+	} else {
+		// Generate default filename with timestamp
+		filename = fmt.Sprintf("deep_insight_report_%s_%s.md", strings.ReplaceAll(s.Query, " ", "_"), time.Now().Format("20060102_150405"))
+	}
+
 	err = os.WriteFile(filename, []byte(s.FinalReport), 0600)
 	if err != nil {
 		fmt.Printf("ReportEngine: 保存报告失败: %v\n", err)

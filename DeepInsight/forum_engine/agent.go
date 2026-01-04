@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/smallnest/langgraphgo/showcases/DeepInsight/schema"
+	"github.com/smallnest/langgraphgo-showcases/DeepInsight/schema"
 	"github.com/tmc/langchaingo/llms"
 	"github.com/tmc/langchaingo/llms/openai"
 )
@@ -169,6 +169,13 @@ func ForumEngineNode(ctx context.Context, state any) (any, error) {
 		}
 
 		response := completion.Choices[0].Content
+		// Clean up markdown code blocks
+		response = strings.TrimPrefix(response, "```markdown")
+		response = strings.TrimPrefix(response, "```md")
+		response = strings.TrimPrefix(response, "```")
+		response = strings.TrimSuffix(response, "```")
+		response = strings.TrimSpace(response)
+
 		entry := fmt.Sprintf("[%s] %s:\n%s", time.Now().Format("15:04:05"), turn.Speaker, response)
 		history = append(history, entry)
 		fmt.Printf("    -> %s\n", response)

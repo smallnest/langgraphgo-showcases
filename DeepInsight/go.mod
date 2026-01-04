@@ -1,4 +1,4 @@
-module github.com/smallnest/langgraphgo/showcases/DeepInsight
+module github.com/smallnest/langgraphgo-showcases/DeepInsight
 
 go 1.25.3
 

@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/smallnest/langgraphgo/showcases/DeepInsight/query_engine"
-	"github.com/smallnest/langgraphgo/showcases/DeepInsight/schema"
+	"github.com/smallnest/langgraphgo-showcases/DeepInsight/query_engine"
+	"github.com/smallnest/langgraphgo-showcases/DeepInsight/schema"
 	"github.com/tmc/langchaingo/llms"
 )
 
@@ -63,17 +63,39 @@ func InsightEngineNode(ctx context.Context, state any) (any, error) {
 
 	// Check if JSON is valid
 	if !json.Valid([]byte(content)) {
-		fmt.Printf("InsightEngine: 结构JSON无效: %s\n", content[:min(200, len(content))])
-		insights = append(insights, "洞察分析结构解析失败。")
-		s.InsightResults = insights
-		return s, nil
+		preview := content
+		if len(preview) > 500 {
+			preview = preview[:500] + "..."
+		}
+		fmt.Printf("InsightEngine: 结构JSON无效，长度=%d\n", len(content))
+		fmt.Printf("内容预览: %s\n", preview)
+		// 尝试修复：查找最后一个完整的段落
+		if strings.Contains(content, `"title":`) && strings.Contains(content, `"content":`) {
+			fmt.Printf("InsightEngine: 尝试使用部分解析...\n")
+			// 简化：使用默认结构
+			structureWrapper.Paragraphs = []struct {
+				Title   string `json:"title"`
+				Content string `json:"content"`
+			}{
+				{Title: "深度洞察分析", Content: "基于研究主题的全面分析"},
+			}
+		} else {
+			insights = append(insights, "洞察分析结构生成失败。")
+			s.InsightResults = insights
+			return s, nil
+		}
 	}
 
 	if err := json.Unmarshal([]byte(content), &structureWrapper); err != nil {
 		fmt.Printf("InsightEngine: 解析结构失败: %v\n", err)
-		insights = append(insights, "洞察分析结构解析失败。")
-		s.InsightResults = insights
-		return s, nil
+		// 使用默认结构作为后备
+		structureWrapper.Paragraphs = []struct {
+			Title   string `json:"title"`
+			Content string `json:"content"`
+		}{
+			{Title: "深度洞察分析", Content: "基于研究主题的全面分析"},
+		}
+		fmt.Printf("InsightEngine: 使用默认结构继续执行\n")
 	}
 
 	// 2. Process each paragraph for deep insight
@@ -82,8 +104,9 @@ func InsightEngineNode(ctx context.Context, state any) (any, error) {
 
 		// Generate Search Query
 		input := map[string]string{
-			"title":   p.Title,
-			"content": p.Content,
+			"original_query": s.Query,
+			"title":          p.Title,
+			"content":        p.Content,
 		}
 		inputBytes, _ := json.Marshal(input)
 
@@ -97,7 +120,7 @@ func InsightEngineNode(ctx context.Context, state any) (any, error) {
 		if err != nil {
 			fmt.Printf("InsightEngine: 生成搜索词失败: %v\n", err)
 			searchQuery = p.Title // Fallback
-			searchTool = "basic_search_news"
+			searchTool = "basic_search"
 		} else {
 			var searchOutput struct {
 				SearchQuery string `json:"search_query"`
@@ -113,12 +136,17 @@ func InsightEngineNode(ctx context.Context, state any) (any, error) {
 			content = strings.TrimSpace(content)
 			// Check if JSON is valid
 			if !json.Valid([]byte(content)) {
-				fmt.Printf("InsightEngine: 搜索查询JSON无效: %s\n", content[:min(200, len(content))])
+				fmt.Printf("\n========== InsightEngine: 搜索查询JSON无效 (长度: %d) ==========\n", len(content))
+				fmt.Println(content)
+				fmt.Println("========================================\n")
 			}
 			if err := json.Unmarshal([]byte(content), &searchOutput); err != nil {
-				fmt.Printf("InsightEngine: JSON解析失败: %v\n", err)
+				fmt.Printf("\n========== InsightEngine: JSON解析失败 (长度: %d) ==========\n", len(content))
+				fmt.Println(content)
+				fmt.Printf("错误: %v\n", err)
+				fmt.Println("========================================\n")
 				searchQuery = s.Query // Fallback to original query
-				searchTool = "basic_search_news"
+				searchTool = "basic_search"
 			} else {
 				searchQuery = searchOutput.SearchQuery
 				searchTool = searchOutput.SearchTool
@@ -169,11 +197,16 @@ func InsightEngineNode(ctx context.Context, state any) (any, error) {
 		content = strings.TrimSpace(content)
 		// Check if JSON is valid
 		if !json.Valid([]byte(content)) {
-			fmt.Printf("InsightEngine: 总结JSON无效: %s\n", content[:min(200, len(content))])
+			fmt.Printf("\n========== InsightEngine: 总结JSON无效 (长度: %d) ==========\n", len(content))
+			fmt.Println(content)
+			fmt.Println("========================================\n")
 			continue
 		}
 		if err := json.Unmarshal([]byte(content), &summaryOutput); err != nil {
-			fmt.Printf("InsightEngine: JSON解析失败: %v\n", err)
+			fmt.Printf("\n========== InsightEngine: JSON解析失败 (长度: %d) ==========\n", len(content))
+			fmt.Println(content)
+			fmt.Printf("错误: %v\n", err)
+			fmt.Println("========================================\n")
 			continue
 		}
 

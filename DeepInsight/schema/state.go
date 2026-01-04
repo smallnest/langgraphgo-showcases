@@ -190,6 +190,9 @@ type DeepInsightState struct {
 
 	// Configuration
 	Config map[string]any `json:"config,omitempty"`
+
+	// Output file path (optional, if specified by -o flag)
+	OutputFile string `json:"output_file,omitempty"`
 }
 
 func NewDeepInsightState(query string) *DeepInsightState {

@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/smallnest/langgraphgo/showcases/DeepInsight/schema"
-	"github.com/smallnest/langgraphgo/showcases/DeepInsight/tool"
+	"github.com/smallnest/langgraphgo-showcases/DeepInsight/schema"
+	"github.com/smallnest/langgraphgo-showcases/DeepInsight/tool"
 )
 
 type TavilyResponse struct {
@@ -76,32 +76,32 @@ func ExecuteSearchWithOptions(ctx context.Context, query string, toolName string
 		}
 		// Parse the WeChat search result and convert to schema.SearchResult
 		return parseWeChatResult(result)
-	case "basic_search_news":
+	case "basic_search":
 		reqBody["search_depth"] = opts.SearchDepth
-		reqBody["topic"] = "news"
-		reqBody["include_domains"] = `["x.com", "twitter.com"]`
+		reqBody["topic"] = "general"
 		reqBody["max_results"] = opts.MaxResults
-	case "deep_search_news":
+	case "deep_search":
 		reqBody["search_depth"] = "advanced"
-		reqBody["topic"] = "news"
+		reqBody["topic"] = "general"
 		reqBody["max_results"] = opts.MaxResults
-	case "search_news_last_24_hours":
+	case "search_last_24_hours":
 		reqBody["search_depth"] = opts.SearchDepth
-		reqBody["topic"] = "news"
+		reqBody["topic"] = "general"
 		reqBody["days"] = 1
 		reqBody["max_results"] = opts.MaxResults
-	case "search_news_last_week":
+	case "search_last_week":
 		reqBody["search_depth"] = opts.SearchDepth
-		reqBody["topic"] = "news"
+		reqBody["topic"] = "general"
 		reqBody["days"] = 7
 		reqBody["max_results"] = opts.MaxResults
-	case "search_images_for_news":
+	case "search_images":
 		reqBody["search_depth"] = opts.SearchDepth
 		reqBody["include_images"] = true
 		reqBody["include_image_descriptions"] = true
 		reqBody["max_results"] = opts.MaxResults
-	case "search_news_by_date":
+	case "search_by_date":
 		reqBody["search_depth"] = "advanced"
+		reqBody["topic"] = "general"
 		// Tavily supports date range in query
 		if startDate != "" && endDate != "" {
 			reqBody["query"] = fmt.Sprintf("%s after:%s before:%s", query, startDate, endDate)
@@ -113,7 +113,7 @@ func ExecuteSearchWithOptions(ctx context.Context, query string, toolName string
 	}
 
 	// Apply days filter if specified and not already set
-	if opts.Days > 0 && toolName != "search_news_last_24_hours" && toolName != "search_news_last_week" {
+	if opts.Days > 0 && toolName != "search_last_24_hours" && toolName != "search_last_week" {
 		reqBody["days"] = opts.Days
 	}
 

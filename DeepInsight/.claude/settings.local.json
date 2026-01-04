@@ -8,7 +8,10 @@
       "Bash(go test:*)",
       "Bash(make build:*)",
       "Bash(curl:*)",
-      "Bash(go run:*)"
+      "Bash(go run:*)",
+      "Bash(go build:*)",
+      "Bash(./DeepInsight -h)",
+      "Bash(./DeepInsight:*)"
     ]
   }
 }

@@ -57,53 +57,68 @@ const (
 {
     "type": "object",
     "properties": {
+        "original_query": {"type": "string", "description": "用户的原始查询主题"},
         "title": {"type": "string"},
         "content": {"type": "string"}
     }
 }
 </INPUT JSON SCHEMA>
 
-你可以使用以下6种专业的研究搜索工具来深度挖掘专家洞察和分析：
+**重要约束 - 原始查询锚定**：
+- original_query 是用户的原始研究主题，所有搜索必须与之高度相关
+- 生成的搜索查询必须紧扣原始查询主题，不得偏离到无关领域
+- 禁止生成与 original_query 无关的搜索内容（如原始查询是"Claude Code"，则不应搜索"量子计算"、"语音识别"等无关话题）
 
-1. **basic_search_news** - 基础研究搜索工具
-   - 适用于：一般性的研究和资料搜索
-   - 特点：快速、标准的通用搜索
+你可以使用以下7种专业的研究搜索工具来深度挖掘专家洞察和分析：
 
-2. **deep_search_news** - 深度研究分析工具
+**优先推荐工具** ⭐：
+
+1. **wechat_search** - 微信公众号文章搜索工具（强烈推荐）
+   - 适用于：需要搜索微信公众号内的专业文章、技术分享、行业分析时
+   - 特点：搜索微信生态系统内的优质公众号文章，内容质量高、专业性强
+   - 适用场景：中文技术内容、行业深度分析、专业观点获取
+   - **优先建议**：对于技术类、专业性强的主题，优先使用此工具获取高质量内容
+
+2. **deep_search** - 深度研究分析工具
    - 适用于：需要全面深入了解某个主题
    - 特点：提供最详细的分析结果，包含高级AI摘要
 
-3. **search_news_last_24_hours** - 24小时最新资料工具
+3. **basic_search** - 基础研究搜索工具
+   - 适用于：一般性的研究和资料搜索
+   - 特点：快速、标准的通用搜索
+
+4. **search_last_24_hours** - 24小时最新资料工具
    - 适用于：了解最新动态和研究进展
    - 特点：只搜索过去24小时的资料
 
-4. **search_news_last_week** - 本周资料工具
+5. **search_last_week** - 本周资料工具
    - 适用于：了解近期研究趋势
    - 特点：搜索过去一周的资料
 
-5. **search_images_for_news** - 图表和可视化资料工具
-   - 适用于：需要数据图表、可视化信息
-   - 特点：提供相关图片和描述
-
-6. **search_news_by_date** - 按日期范围搜索工具
+6. **search_by_date** - 按日期范围搜索工具
    - 适用于：研究特定历史时期或追踪发展
    - 特点：可以指定开始和结束日期
    - 特殊要求：需要提供start_date和end_date参数，格式为'YYYY-MM-DD'
 
+7. **search_images** - 图表和可视化资料工具
+   - 适用于：需要数据图表、可视化信息
+   - 特点：提供相关图片和描述
+
 **你的核心使命：挖掘专家观点、提炼关键洞察、发现深层规律**
 
 你的任务是：
-1. **深入理解洞察需求**：根据段落主题，思考需要挖掘哪些关键洞察
-2. **精准选择搜索工具**：选择最能获取深度洞察的搜索工具
-3. **制定高质量搜索策略**：
+1. **优先考虑 wechat_search**，特别是对于技术类、专业性强的研究主题
+2. **深入理解洞察需求**：根据段落主题，思考需要挖掘哪些关键洞察
+3. **精准选择搜索工具**：选择最能获取深度洞察的搜索工具
+4. **制定高质量搜索策略**：
    - 使用专业术语和学术词汇
    - 关注专家观点和权威研究
    - 考虑多角度、跨学科的搜索策略
    - 寻找因果机制和根本原因
-4. **参数优化配置**：
-   - search_news_by_date: 需要提供start_date和end_date参数（格式：YYYY-MM-DD）
-5. **阐述选择理由**：说明为什么这样的搜索策略能够获得最有价值的洞察
-6. **深度思考分析维度**：
+5. **参数优化配置**：
+   - search_by_date: 需要提供start_date和end_date参数（格式：YYYY-MM-DD）
+6. **阐述选择理由**：说明为什么这样的搜索策略能够获得最有价值的洞察
+7. **深度思考分析维度**：
    - 因果分析：寻找根本原因和关键驱动因素
    - 机制分析：理解现象背后的作用机制
    - 比较分析：对比不同观点、不同案例
@@ -126,8 +141,8 @@ const (
         "search_query": {"type": "string"},
         "search_tool": {"type": "string"},
         "reasoning": {"type": "string"},
-        "start_date": {"type": "string", "description": "开始日期，格式YYYY-MM-DD，仅search_news_by_date工具需要"},
-        "end_date": {"type": "string", "description": "结束日期，格式YYYY-MM-DD，仅search_news_by_date工具需要"}
+        "start_date": {"type": "string", "description": "开始日期，格式YYYY-MM-DD，仅search_by_date工具需要"},
+        "end_date": {"type": "string", "description": "结束日期，格式YYYY-MM-DD，仅search_by_date工具需要"}
     },
     "required": ["search_query", "search_tool", "reasoning"]
 }
@@ -245,6 +260,7 @@ const (
 {
     "type": "object",
     "properties": {
+        "original_query": {"type": "string", "description": "用户的原始查询主题"},
         "title": {"type": "string"},
         "content": {"type": "string"},
         "paragraph_latest_state": {"type": "string"}
@@ -252,39 +268,54 @@ const (
 }
 </INPUT JSON SCHEMA>
 
-你可以使用以下6种专业的研究搜索工具来深度挖掘洞察：
+**重要约束 - 原始查询锚定**：
+- original_query 是用户的原始研究主题，所有搜索必须与之高度相关
+- 生成的搜索查询必须紧扣原始查询主题，不得偏离到无关领域
+- 反思搜索时应补充与原始查询直接相关的信息，而非泛泛的技术术语
+- 禁止生成与 original_query 无关的搜索内容（如原始查询是"Claude Code"，则不应搜索"量子计算"、"语音识别"等无关话题）
 
-1. **basic_search_news** - 基础研究搜索工具
-2. **deep_search_news** - 深度研究分析工具
-3. **search_news_last_24_hours** - 24小时最新资料工具
-4. **search_news_last_week** - 本周资料工具
-5. **search_images_for_news** - 图表和可视化资料工具
-6. **search_news_by_date** - 按日期范围搜索工具（需要时间参数）
+你可以使用以下7种专业的研究搜索工具来深度挖掘洞察：
+
+**优先推荐工具** ⭐：
+
+1. **wechat_search** - 微信公众号文章搜索工具（强烈推荐）
+   - 适用于：需要搜索微信公众号内的专业文章、技术分享、行业分析时
+   - 特点：搜索微信生态系统内的优质公众号文章，内容质量高、专业性强
+   - 适用场景：中文技术内容、行业深度分析、专业观点获取
+   - **优先建议**：对于技术类、专业性强的主题，优先使用此工具获取高质量内容
+
+2. **deep_search** - 深度研究分析工具
+3. **basic_search** - 基础研究搜索工具
+4. **search_last_24_hours** - 24小时最新资料工具
+5. **search_last_week** - 本周资料工具
+6. **search_by_date** - 按日期范围搜索工具（需要时间参数）
+7. **search_images** - 图表和可视化资料工具
 
 **反思的核心目标：让洞察更深入、更有价值、更有启发性**
 
 你的任务是：
-1. **深度反思洞察质量**：
+1. **优先考虑 wechat_search**，特别是对于技术类、专业性强的研究主题
+2. **深度反思洞察质量**：
    - 当前段落是否足够深入？是否只停留在表面现象？
    - 是否缺乏有价值的专家观点和理论支撑？
    - 因果分析是否透彻？机制分析是否清晰？
    - 是否缺少不同观点的比较和辨析？
 
-2. **识别洞察缺口**：
+3. **识别洞察缺口**：
    - 哪些根本原因还需要进一步挖掘？
    - 哪些专家观点还需要补充？
    - 是否需要更多跨学科的视角？
    - 是否需要更多案例验证和数据支撑？
 
-3. **精准补充搜索**：
+4. **精准补充搜索**：
    - 选择最能填补洞察缺口的搜索工具
    - 制定精确的搜索策略来获取缺失的洞察资料
    - 考虑从不同角度、不同层次进行补充搜索
 
-4. **参数配置要求**：
-   - search_news_by_date: 必须提供start_date和end_date参数（格式：YYYY-MM-DD）
+5. **参数配置要求**：
+   - search_by_date: 必须提供start_date和end_date参数（格式：YYYY-MM-DD）
 
-5. **阐述补充理由**：明确说明为什么需要这些额外的洞察资料
+6. **阐述补充理由**：明确说明为什么需要这些额外的洞察资料
 
 **反思重点**：
 - 洞察是否达到了足够的深度和穿透力？
@@ -310,8 +341,8 @@ const (
         "search_query": {"type": "string"},
         "search_tool": {"type": "string"},
         "reasoning": {"type": "string"},
-        "start_date": {"type": "string", "description": "开始日期，格式YYYY-MM-DD，search_news_by_date工具可能需要"},
-        "end_date": {"type": "string", "description": "结束日期，格式YYYY-MM-DD，search_news_by_date工具可能需要"}
+        "start_date": {"type": "string", "description": "开始日期，格式YYYY-MM-DD，search_by_date工具可能需要"},
+        "end_date": {"type": "string", "description": "结束日期，格式YYYY-MM-DD，search_by_date工具可能需要"}
     },
     "required": ["search_query", "search_tool", "reasoning"]
 }

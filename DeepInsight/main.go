@@ -2,23 +2,42 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"log"
 	"os"
+	"strings"
 
+	"github.com/smallnest/langgraphgo-showcases/DeepInsight/forum_engine"
+	"github.com/smallnest/langgraphgo-showcases/DeepInsight/insight_engine"
+	"github.com/smallnest/langgraphgo-showcases/DeepInsight/media_engine"
+	"github.com/smallnest/langgraphgo-showcases/DeepInsight/query_engine"
+	"github.com/smallnest/langgraphgo-showcases/DeepInsight/report_engine"
+	"github.com/smallnest/langgraphgo-showcases/DeepInsight/schema"
 	"github.com/smallnest/langgraphgo/graph"
-	"github.com/smallnest/langgraphgo/showcases/DeepInsight/forum_engine"
-	"github.com/smallnest/langgraphgo/showcases/DeepInsight/insight_engine"
-	"github.com/smallnest/langgraphgo/showcases/DeepInsight/media_engine"
-	"github.com/smallnest/langgraphgo/showcases/DeepInsight/query_engine"
-	"github.com/smallnest/langgraphgo/showcases/DeepInsight/report_engine"
-	"github.com/smallnest/langgraphgo/showcases/DeepInsight/schema"
 )
 
 func main() {
-	if len(os.Args) < 2 {
-		fmt.Println("用法: go run main.go <研究主题>")
-		fmt.Println("示例: go run main.go \"人工智能的发展趋势\"")
+	// Define flags
+	var outputFile string
+	flag.StringVar(&outputFile, "o", "", "输出文件路径 (例如: -o report.md)")
+
+	// Parse flags
+	flag.Parse()
+
+	// Get the research topic (remaining arguments after flags)
+	args := flag.Args()
+	if len(args) < 1 {
+		fmt.Println("用法: go run main.go [-o 输出文件] <研究主题>")
+		fmt.Println()
+		fmt.Println("参数:")
+		fmt.Println("  -o <文件>  指定输出文件路径 (可选)")
+		fmt.Println("  <研究主题>  要研究的主题 (必需)")
+		fmt.Println()
+		fmt.Println("示例:")
+		fmt.Println("  go run main.go \"人工智能的发展趋势\"")
+		fmt.Println("  go run main.go -o report.md \"人工智能的发展趋势\"")
+		fmt.Println("  go run main.go -o output.md \"Claude Code使用经验总结\"")
 		return
 	}
 
@@ -29,10 +48,12 @@ func main() {
 		log.Fatal("错误: 未设置 TAVILY_API_KEY 环境变量。")
 	}
 
-	query := os.Args[1]
+	// Join remaining args as the query (in case topic has spaces without quotes)
+	query := strings.Join(args, " ")
 
 	// Initialize state
 	initialState := schema.NewDeepInsightState(query)
+	initialState.OutputFile = outputFile // Set output file if specified
 
 	// Create graph with typed state *schema.DeepInsightState
 	workflow := graph.NewStateGraph[*schema.DeepInsightState]()
@@ -82,5 +103,9 @@ func main() {
 	// Print result
 	fmt.Println("\n=== 执行完成 ===")
 	fmt.Printf("深度洞察报告已生成，包含 %d 个段落。\n", len(finalState.Paragraphs))
-	fmt.Printf("报告已保存到文件系统中。\n")
+	if finalState.OutputFile != "" {
+		fmt.Printf("报告已保存至: %s\n", finalState.OutputFile)
+	} else {
+		fmt.Printf("报告已保存到文件系统（默认文件名格式: deep_insight_report_<主题>_<时间戳>.md）\n")
+	}
 }
