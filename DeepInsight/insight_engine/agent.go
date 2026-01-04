@@ -19,6 +19,27 @@ func min(a, b int) int {
 	return b
 }
 
+// fixDoubleEscapedSequences fixes common double-escape issues in LLM-generated JSON
+// LLMs often generate \\n \\t \\\" when they mean \n \t \" in string values
+// This function converts these double-escaped sequences to single-escaped ones
+func fixDoubleEscapedSequences(content string) string {
+	// Replace common double-escaped sequences with single-escaped ones
+	replacements := []struct {
+		from string
+		to   string
+	}{
+		{`\\n`, `\n`}, // newline
+		{`\\t`, `\t`}, // tab
+		// Note: We skip quote handling to avoid breaking valid JSON
+	}
+
+	for _, repl := range replacements {
+		content = strings.ReplaceAll(content, repl.from, repl.to)
+	}
+
+	return content
+}
+
 // InsightEngineNode performs expert analysis and deep insight generation.
 func InsightEngineNode(ctx context.Context, state any) (any, error) {
 	s := state.(*schema.DeepInsightState)
@@ -60,6 +81,12 @@ func InsightEngineNode(ctx context.Context, state any) (any, error) {
 	content = strings.TrimPrefix(content, "```")
 	content = strings.TrimSuffix(content, "```")
 	content = strings.TrimSpace(content)
+
+	// Fix common invalid escape sequences that LLMs might generate
+	content = strings.ReplaceAll(content, `\'`, "'")
+
+	// Fix double-escaped sequences: LLMs often generate \\n \\t \\\" when they mean \n \t \"
+	content = fixDoubleEscapedSequences(content)
 
 	// Check if JSON is valid
 	if !json.Valid([]byte(content)) {
@@ -134,6 +161,13 @@ func InsightEngineNode(ctx context.Context, state any) (any, error) {
 			content = strings.TrimPrefix(content, "```")
 			content = strings.TrimSuffix(content, "```")
 			content = strings.TrimSpace(content)
+
+			// Fix common invalid escape sequences that LLMs might generate
+			content = strings.ReplaceAll(content, `\'`, "'")
+
+			// Fix double-escaped sequences: LLMs often generate \\n \\t \\\" when they mean \n \t \"
+			content = fixDoubleEscapedSequences(content)
+
 			// Check if JSON is valid
 			if !json.Valid([]byte(content)) {
 				fmt.Printf("\n========== InsightEngine: 搜索查询JSON无效 (长度: %d) ==========\n", len(content))
@@ -195,6 +229,13 @@ func InsightEngineNode(ctx context.Context, state any) (any, error) {
 		content = strings.TrimPrefix(content, "```")
 		content = strings.TrimSuffix(content, "```")
 		content = strings.TrimSpace(content)
+
+		// Fix common invalid escape sequences that LLMs might generate
+		content = strings.ReplaceAll(content, `\'`, "'")
+
+		// Fix double-escaped sequences: LLMs often generate \\n \\t \\\" when they mean \n \t \"
+		content = fixDoubleEscapedSequences(content)
+
 		// Check if JSON is valid
 		if !json.Valid([]byte(content)) {
 			fmt.Printf("\n========== InsightEngine: 总结JSON无效 (长度: %d) ==========\n", len(content))

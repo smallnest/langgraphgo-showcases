@@ -48,11 +48,31 @@ func generateJSON(ctx context.Context, llm llms.Model, systemPrompt, userContent
 	content = strings.TrimSuffix(content, "```")
 	content = strings.TrimSpace(content)
 
+	// Fix common invalid escape sequences that LLMs might generate
+	// \' is not a valid JSON escape sequence (single quotes don't need escaping in JSON)
+	content = strings.ReplaceAll(content, `\'`, "'")
+
+	// Fix double-escaped sequences: LLMs often generate \\n \\t \\\" when they mean \n \t \"
+	// But we need to be careful: we should only fix these in string values, not in the JSON structure itself
+	// A safe approach: only replace if they appear in quotes (string values)
+	// Since we already know this is supposed to be valid JSON structure, we can do a targeted replacement
+	// Replace \\n -> \n, \\t -> \\t, \\\" -> \" only when they're clearly escape sequences in the content
+	content = fixDoubleEscapedSequences(content)
+
 	// 验证JSON是否有效
 	if !json.Valid([]byte(content)) {
 		// 输出完整内容以便排查
-		fmt.Printf("\n========== LLM返回的无效JSON内容 (长度: %d) ==========\n", len(content))
+		fmt.Printf("\n========== LLM返回的无效JSON内容 (长度: %d字节) ==========\n", len(content))
 		fmt.Println(content)
+		// 检查是否看起来像被截断
+		if !strings.HasSuffix(content, "}") && !strings.HasSuffix(content, "]") {
+			fmt.Printf("⚠️  警告: JSON 似乎被截断（缺少结尾的 } 或 ]）\n")
+			lastN := 20
+			if len(content) < lastN {
+				lastN = len(content)
+			}
+			fmt.Printf("⚠️  最后%d个字符: %q\n", lastN, content[len(content)-lastN:])
+		}
 		fmt.Println("========================================\n")
 		return fmt.Errorf("LLM返回的内容不是有效的JSON，长度=%d，已输出完整内容", len(content))
 	}
@@ -68,6 +88,28 @@ func generateJSON(ctx context.Context, llm llms.Model, systemPrompt, userContent
 	}
 
 	return nil
+}
+
+// fixDoubleEscapedSequences fixes common double-escape issues in LLM-generated JSON
+// LLMs often generate \\n \\t \\\" when they mean \n \t \" in string values
+// This function converts these double-escaped sequences to single-escaped ones
+func fixDoubleEscapedSequences(content string) string {
+	// Replace common double-escaped sequences with single-escaped ones
+	// Note: We skip quote handling to avoid breaking valid JSON
+	replacements := []struct {
+		from string
+		to   string
+	}{
+		{`\\n`, `\n`}, // newline
+		{`\\t`, `\t`}, // tab
+		// Note: We don't handle \\" to avoid breaking valid JSON escape sequences
+	}
+
+	for _, repl := range replacements {
+		content = strings.ReplaceAll(content, repl.from, repl.to)
+	}
+
+	return content
 }
 
 // QueryEngineNode implements the main logic.
