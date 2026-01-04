@@ -8,30 +8,30 @@ import (
 
 // Insight represents a key insight or discovery.
 type Insight struct {
-	ID          string    `json:"id"`
-	Category    string    `json:"category"`     // causal_factor, expert_view, evidence, trend, prediction
-	Title       string    `json:"title"`
-	Content     string    `json:"content"`
-	Source      string    `json:"source"`       // Source of the insight
-	Confidence  float64   `json:"confidence"`   // Confidence level (0-1)
-	Evidence    []string  `json:"evidence"`     // Supporting evidence
-	CreatedAt   time.Time `json:"created_at"`
+	ID         string    `json:"id"`
+	Category   string    `json:"category"` // causal_factor, expert_view, evidence, trend, prediction
+	Title      string    `json:"title"`
+	Content    string    `json:"content"`
+	Source     string    `json:"source"`     // Source of the insight
+	Confidence float64   `json:"confidence"` // Confidence level (0-1)
+	Evidence   []string  `json:"evidence"`   // Supporting evidence
+	CreatedAt  time.Time `json:"created_at"`
 }
 
 // SearchResult represents a single search result with research insights.
 type SearchResult struct {
-	Title         string   `json:"title"`
-	URL           string   `json:"url"`
-	Content       string   `json:"content"`
-	Score         float64  `json:"score"`
-	RawContent    string   `json:"raw_content,omitempty"`
-	PublishedDate string   `json:"published_date,omitempty"`
+	Title         string  `json:"title"`
+	URL           string  `json:"url"`
+	Content       string  `json:"content"`
+	Score         float64 `json:"score"`
+	RawContent    string  `json:"raw_content,omitempty"`
+	PublishedDate string  `json:"published_date,omitempty"`
 	// Deep research analysis (replacing sentiment fields)
-	KeyInsights      []string  `json:"key_insights,omitempty"`      // Key insights extracted
-	SourceType       string    `json:"source_type,omitempty"`       // academic, industry, government, expert
-	Reliability      float64   `json:"reliability,omitempty"`       // Source reliability score
-	Methodology      string    `json:"methodology,omitempty"`       // Research methodology mentioned
-	DataQuality      string    `json:"data_quality,omitempty"`      // Quality of data/evidence
+	KeyInsights []string `json:"key_insights,omitempty"` // Key insights extracted
+	SourceType  string   `json:"source_type,omitempty"`  // academic, industry, government, expert
+	Reliability float64  `json:"reliability,omitempty"`  // Source reliability score
+	Methodology string   `json:"methodology,omitempty"`  // Research methodology mentioned
+	DataQuality string   `json:"data_quality,omitempty"` // Quality of data/evidence
 }
 
 // ResearchState tracks the research progress for a paragraph.
@@ -81,39 +81,39 @@ type Paragraph struct {
 // GraphRAGNode represents a node in the knowledge graph.
 type GraphRAGNode struct {
 	ID          string            `json:"id"`
-	Type        string            `json:"type"`        // entity, concept, event, theory, methodology
+	Type        string            `json:"type"` // entity, concept, event, theory, methodology
 	Title       string            `json:"title"`
 	Description string            `json:"description"`
 	Attributes  map[string]string `json:"attributes"`
-	Source      string            `json:"source"`      // Which engine/node created this
+	Source      string            `json:"source"` // Which engine/node created this
 	CreatedAt   time.Time         `json:"created_at"`
 }
 
 // GraphRAGEdge represents a relationship between nodes.
 type GraphRAGEdge struct {
 	ID         string    `json:"id"`
-	Source     string    `json:"source"`   // Source node ID
-	Target     string    `json:"target"`   // Target node ID
-	Relation   string    `json:"relation"` // Type of relationship (causes, supports, contradicts, relates_to)
-	Weight     float64   `json:"weight"`   // Strength of relationship
+	Source     string    `json:"source"`     // Source node ID
+	Target     string    `json:"target"`     // Target node ID
+	Relation   string    `json:"relation"`   // Type of relationship (causes, supports, contradicts, relates_to)
+	Weight     float64   `json:"weight"`     // Strength of relationship
 	Confidence float64   `json:"confidence"` // Confidence in the relationship
 	CreatedAt  time.Time `json:"created_at"`
 }
 
 // GraphRAGConfig holds GraphRAG configuration.
 type GraphRAGConfig struct {
-	Enabled      bool     `json:"enabled"`
-	MaxQueries   int      `json:"max_queries"`   // Max queries for knowledge retrieval
-	NodeTypes    []string `json:"node_types"`    // Types of nodes to extract
+	Enabled       bool     `json:"enabled"`
+	MaxQueries    int      `json:"max_queries"`    // Max queries for knowledge retrieval
+	NodeTypes     []string `json:"node_types"`     // Types of nodes to extract
 	RelationTypes []string `json:"relation_types"` // Types of relations to extract
 }
 
 // DefaultGraphRAGConfig returns default GraphRAG configuration.
 func DefaultGraphRAGConfig() GraphRAGConfig {
 	return GraphRAGConfig{
-		Enabled:      false,
-		MaxQueries:   3,
-		NodeTypes:    []string{"entity", "concept", "event", "theory", "methodology"},
+		Enabled:       false,
+		MaxQueries:    3,
+		NodeTypes:     []string{"entity", "concept", "event", "theory", "methodology"},
 		RelationTypes: []string{"related_to", "causes", "supports", "contradicts", "part_of", "mentions"},
 	}
 }
@@ -131,11 +131,11 @@ type GraphRAGState struct {
 // NewGraphRAGState creates a new GraphRAG state.
 func NewGraphRAGState() *GraphRAGState {
 	return &GraphRAGState{
-		Nodes:  make([]GraphRAGNode, 0),
-		Edges:  make([]GraphRAGEdge, 0),
-		Queries: make([]string, 0),
+		Nodes:     make([]GraphRAGNode, 0),
+		Edges:     make([]GraphRAGEdge, 0),
+		Queries:   make([]string, 0),
 		Responses: make([]string, 0),
-		Config: DefaultGraphRAGConfig(),
+		Config:    DefaultGraphRAGConfig(),
 	}
 }
 
@@ -167,10 +167,10 @@ type DeepInsightState struct {
 	Query string `json:"query"`
 
 	// QueryEngine State
-	ReportTitle string       `json:"report_title"`
-	Paragraphs  []*Paragraph `json:"paragraphs"`
-	ResearchResults []string `json:"research_results"` // The compiled research report(s)
-	FinalReport string       `json:"final_report"`     // The final combined report
+	ReportTitle     string       `json:"report_title"`
+	Paragraphs      []*Paragraph `json:"paragraphs"`
+	ResearchResults []string     `json:"research_results"` // The compiled research report(s)
+	FinalReport     string       `json:"final_report"`     // The final combined report
 
 	// MediaEngine State
 	MediaResults []string `json:"media_results"`
@@ -186,7 +186,7 @@ type DeepInsightState struct {
 
 	// Execution metadata
 	StartTime time.Time `json:"start_time"`
-	EndTime  time.Time `json:"end_time,omitempty"`
+	EndTime   time.Time `json:"end_time,omitempty"`
 
 	// Configuration
 	Config map[string]any `json:"config,omitempty"`
@@ -194,11 +194,11 @@ type DeepInsightState struct {
 
 func NewDeepInsightState(query string) *DeepInsightState {
 	return &DeepInsightState{
-		Query:           query,
-		Paragraphs:      make([]*Paragraph, 0),
-		GraphRAG:        NewGraphRAGState(),
-		StartTime:       time.Now(),
-		Config:          make(map[string]any),
+		Query:      query,
+		Paragraphs: make([]*Paragraph, 0),
+		GraphRAG:   NewGraphRAGState(),
+		StartTime:  time.Now(),
+		Config:     make(map[string]any),
 	}
 }
 

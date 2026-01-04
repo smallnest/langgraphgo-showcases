@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls:*)",
+      "Bash(find:*)",
+      "mcp__fetch__imageFetch",
+      "Bash(go mod tidy:*)",
+      "Bash(go test:*)",
+      "Bash(make build:*)",
+      "Bash(curl:*)",
+      "Bash(go run:*)"
+    ]
+  }
+}

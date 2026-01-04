@@ -69,35 +69,35 @@ type LogEntry struct {
 
 // Logger provides structured logging with context
 type Logger struct {
-	mu       sync.RWMutex
-	level    LogLevel
-	output   *os.File
-	entries  []LogEntry
+	mu         sync.RWMutex
+	level      LogLevel
+	output     *os.File
+	entries    []LogEntry
 	maxEntries int
-	component string
-	fileLog   bool
-	logFile   *os.File
+	component  string
+	fileLog    bool
+	logFile    *os.File
 }
 
 // LoggerConfig holds logger configuration
 type LoggerConfig struct {
-	Level      LogLevel
-	Output     *os.File
-	MaxEntries int
-	Component  string
+	Level         LogLevel
+	Output        *os.File
+	MaxEntries    int
+	Component     string
 	EnableFileLog bool
-	LogDir     string
+	LogDir        string
 }
 
 // DefaultLoggerConfig returns default logger configuration
 func DefaultLoggerConfig() LoggerConfig {
 	return LoggerConfig{
-		Level:      INFO,
-		Output:     os.Stdout,
-		MaxEntries: 1000,
-		Component:  "BettaFish",
+		Level:         INFO,
+		Output:        os.Stdout,
+		MaxEntries:    1000,
+		Component:     "BettaFish",
 		EnableFileLog: false,
-		LogDir:    "logs",
+		LogDir:        "logs",
 	}
 }
 
@@ -139,10 +139,10 @@ func NewLogger(config LoggerConfig) (*Logger, error) {
 // NewSimpleLogger creates a simple logger with default settings
 func NewSimpleLogger(component string) *Logger {
 	logger, _ := NewLogger(LoggerConfig{
-		Level:     INFO,
-		Output:    os.Stdout,
+		Level:      INFO,
+		Output:     os.Stdout,
 		MaxEntries: 1000,
-		Component: component,
+		Component:  component,
 	})
 	return logger
 }

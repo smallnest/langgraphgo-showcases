@@ -14,7 +14,11 @@
       "Bash(go run:*)",
       "Bash(ls:*)",
       "Bash(go build:*)",
-      "Bash(timeout 60 go run:*)"
+      "Bash(timeout 60 go run:*)",
+      "Bash(go test:*)",
+      "Bash(go mod tidy:*)",
+      "Bash(go get:*)",
+      "Bash(go list:*)"
     ],
     "deny": [],
     "ask": []

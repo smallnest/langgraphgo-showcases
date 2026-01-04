@@ -15,9 +15,9 @@ type SearchResult struct {
 	RawContent    string  `json:"raw_content,omitempty"`
 	PublishedDate string  `json:"published_date,omitempty"`
 	// Sentiment analysis (for GraphRAG)
-	Sentiment     string  `json:"sentiment,omitempty"`     // positive, negative, neutral
+	Sentiment      string  `json:"sentiment,omitempty"`       // positive, negative, neutral
 	SentimentScore float64 `json:"sentiment_score,omitempty"` // Confidence score
-	Platform      string  `json:"platform,omitempty"`      // Source platform (weibo, zhihu, etc.)
+	Platform       string  `json:"platform,omitempty"`        // Source platform (weibo, zhihu, etc.)
 }
 
 // ResearchState tracks the research progress for a paragraph.
@@ -59,38 +59,38 @@ type Paragraph struct {
 // GraphRAGNode represents a node in the knowledge graph.
 type GraphRAGNode struct {
 	ID          string            `json:"id"`
-	Type        string            `json:"type"`        // entity, concept, event
+	Type        string            `json:"type"` // entity, concept, event
 	Title       string            `json:"title"`
 	Description string            `json:"description"`
 	Attributes  map[string]string `json:"attributes"`
-	Source      string            `json:"source"`      // Which engine/node created this
+	Source      string            `json:"source"` // Which engine/node created this
 	CreatedAt   time.Time         `json:"created_at"`
 }
 
 // GraphRAGEdge represents a relationship between nodes.
 type GraphRAGEdge struct {
-	ID         string    `json:"id"`
-	Source     string    `json:"source"`   // Source node ID
-	Target     string    `json:"target"`   // Target node ID
-	Relation   string    `json:"relation"` // Type of relationship
-	Weight     float64   `json:"weight"`   // Strength of relationship
-	CreatedAt  time.Time `json:"created_at"`
+	ID        string    `json:"id"`
+	Source    string    `json:"source"`   // Source node ID
+	Target    string    `json:"target"`   // Target node ID
+	Relation  string    `json:"relation"` // Type of relationship
+	Weight    float64   `json:"weight"`   // Strength of relationship
+	CreatedAt time.Time `json:"created_at"`
 }
 
 // GraphRAGConfig holds GraphRAG configuration.
 type GraphRAGConfig struct {
-	Enabled      bool     `json:"enabled"`
-	MaxQueries   int      `json:"max_queries"`   // Max queries for knowledge retrieval
-	NodeTypes    []string `json:"node_types"`    // Types of nodes to extract
+	Enabled       bool     `json:"enabled"`
+	MaxQueries    int      `json:"max_queries"`    // Max queries for knowledge retrieval
+	NodeTypes     []string `json:"node_types"`     // Types of nodes to extract
 	RelationTypes []string `json:"relation_types"` // Types of relations to extract
 }
 
 // DefaultGraphRAGConfig returns default GraphRAG configuration.
 func DefaultGraphRAGConfig() GraphRAGConfig {
 	return GraphRAGConfig{
-		Enabled:      false,
-		MaxQueries:   3,
-		NodeTypes:    []string{"entity", "concept", "event"},
+		Enabled:       false,
+		MaxQueries:    3,
+		NodeTypes:     []string{"entity", "concept", "event"},
 		RelationTypes: []string{"related_to", "causes", "part_of", "mentions"},
 	}
 }
@@ -108,11 +108,11 @@ type GraphRAGState struct {
 // NewGraphRAGState creates a new GraphRAG state.
 func NewGraphRAGState() *GraphRAGState {
 	return &GraphRAGState{
-		Nodes:  make([]GraphRAGNode, 0),
-		Edges:  make([]GraphRAGEdge, 0),
-		Queries: make([]string, 0),
+		Nodes:     make([]GraphRAGNode, 0),
+		Edges:     make([]GraphRAGEdge, 0),
+		Queries:   make([]string, 0),
 		Responses: make([]string, 0),
-		Config: DefaultGraphRAGConfig(),
+		Config:    DefaultGraphRAGConfig(),
 	}
 }
 
@@ -163,7 +163,7 @@ type BettaFishState struct {
 
 	// Execution metadata
 	StartTime time.Time `json:"start_time"`
-	EndTime  time.Time `json:"end_time,omitempty"`
+	EndTime   time.Time `json:"end_time,omitempty"`
 
 	// Configuration
 	Config map[string]any `json:"config,omitempty"`

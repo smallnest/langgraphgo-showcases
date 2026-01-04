@@ -147,10 +147,10 @@ func CleanJSONContent(content string) string {
 	content = strings.TrimSpace(content)
 
 	// Fix common LLM JSON issues
-	content = strings.ReplaceAll(content, "\u201C", "\"") // Left double quotation mark
-	content = strings.ReplaceAll(content, "\u201D", "\"") // Right double quotation mark
-	content = strings.ReplaceAll(content, "\u2018", "'")  // Left single quotation mark
-	content = strings.ReplaceAll(content, "\u2019", "'")  // Right single quotation mark
+	content = strings.ReplaceAll(content, "\u201C", "\"")  // Left double quotation mark
+	content = strings.ReplaceAll(content, "\u201D", "\"")  // Right double quotation mark
+	content = strings.ReplaceAll(content, "\u2018", "'")   // Left single quotation mark
+	content = strings.ReplaceAll(content, "\u2019", "'")   // Right single quotation mark
 	content = strings.ReplaceAll(content, "\u2026", "...") // Ellipsis
 
 	// Remove control characters except newlines and tabs

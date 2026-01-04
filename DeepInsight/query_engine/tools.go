@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/smallnest/langgraphgo/showcases/DeepInsight/schema"
+	"github.com/smallnest/langgraphgo/showcases/DeepInsight/tool"
 )
 
 type TavilyResponse struct {
@@ -63,9 +64,22 @@ func ExecuteSearchWithOptions(ctx context.Context, query string, toolName string
 
 	// Configure based on tool name
 	switch toolName {
+	case "wechat_search":
+		// Use WeChat official account article search
+		wechatTool, err := tool.NewWeChatSearch(tool.WithWeChatCount(opts.MaxResults))
+		if err != nil {
+			return nil, fmt.Errorf("failed to create WeChat search tool: %w", err)
+		}
+		result, err := wechatTool.Call(ctx, query)
+		if err != nil {
+			return nil, fmt.Errorf("WeChat search failed: %w", err)
+		}
+		// Parse the WeChat search result and convert to schema.SearchResult
+		return parseWeChatResult(result)
 	case "basic_search_news":
 		reqBody["search_depth"] = opts.SearchDepth
 		reqBody["topic"] = "news"
+		reqBody["include_domains"] = `["x.com", "twitter.com"]`
 		reqBody["max_results"] = opts.MaxResults
 	case "deep_search_news":
 		reqBody["search_depth"] = "advanced"
@@ -166,4 +180,66 @@ func ParseDateRange(startDate, endDate string) (start, end time.Time, err error)
 		}
 	}
 	return start, end, nil
+}
+
+// parseWeChatResult parses WeChat search result string and converts to schema.SearchResult
+func parseWeChatResult(wechatResult string) ([]schema.SearchResult, error) {
+	var results []schema.SearchResult
+
+	// Parse the formatted WeChat search result
+	// Format example:
+	// Found 5 articles for: nano banana pro
+	//
+	// 1. Title: 【免费】Nano Banana Pro 教程一:生成你的头像
+	//    Publish Time: 2024-01-01
+	//    URL: https://weixin.sogou.com/link?...
+	//    Content: ...
+	//
+	// 2. Title: ...
+
+	lines := strings.Split(wechatResult, "\n")
+	var currentResult *schema.SearchResult
+
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, "Found") && strings.Contains(line, "articles for:") {
+			// Skip the header line
+			continue
+		}
+		if strings.HasPrefix(line, "No articles found") {
+			// No results
+			return []schema.SearchResult{}, nil
+		}
+
+		// Match article index: "1. Title: ..."
+		if len(line) > 0 && line[0] >= '1' && line[0] <= '9' && strings.Contains(line, ". Title:") {
+			// Save previous result if exists
+			if currentResult != nil && currentResult.Title != "" {
+				results = append(results, *currentResult)
+			}
+			// Start new result
+			parts := strings.SplitN(line, ". Title: ", 2)
+			currentResult = &schema.SearchResult{}
+			if len(parts) == 2 {
+				currentResult.Title = strings.TrimSpace(parts[1])
+			}
+		} else if currentResult != nil {
+			if strings.HasPrefix(line, "Publish Time:") {
+				currentResult.PublishedDate = strings.TrimSpace(strings.TrimPrefix(line, "Publish Time:"))
+			} else if strings.HasPrefix(line, "URL:") {
+				currentResult.URL = strings.TrimSpace(strings.TrimPrefix(line, "URL:"))
+			} else if strings.HasPrefix(line, "Content:") {
+				content := strings.TrimSpace(strings.TrimPrefix(line, "Content:"))
+				currentResult.Content = content
+				currentResult.RawContent = content
+			}
+		}
+	}
+
+	// Don't forget the last result
+	if currentResult != nil && currentResult.Title != "" {
+		results = append(results, *currentResult)
+	}
+
+	return results, nil
 }
