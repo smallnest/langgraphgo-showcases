@@ -99,8 +99,23 @@ export TAVILY_API_KEY="your-tavily-api-key"
 ### 运行
 ```bash
 cd showcases/DeepInsight
+
+# 基本用法
 go run main.go "人工智能的发展趋势"
+
+# 指定输出文件
+go run main.go -o report.md "人工智能的发展趋势"
+
+# 简单模式（跳过深度洞察和专家讨论，更快速）
+go run main.go -simple "人工智能的发展趋势"
+
+# 组合使用
+go run main.go -o output.md -simple "Claude Code使用经验总结"
 ```
+
+### 参数说明
+- `-o <文件>`: 指定输出文件路径（可选）
+- `-simple`: 简单模式，跳过 `insight_engine` 和 `forum_engine`，仅进行基础调研和媒体搜索（可选）
 
 ### 输出
 生成一个包含以下内容的深度洞察报告：

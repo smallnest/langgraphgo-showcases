@@ -20,7 +20,9 @@ import (
 func main() {
 	// Define flags
 	var outputFile string
+	var simpleMode bool
 	flag.StringVar(&outputFile, "o", "", "输出文件路径 (例如: -o report.md)")
+	flag.BoolVar(&simpleMode, "simple", false, "简单模式，跳过深度洞察和专家讨论")
 
 	// Parse flags
 	flag.Parse()
@@ -28,16 +30,18 @@ func main() {
 	// Get the research topic (remaining arguments after flags)
 	args := flag.Args()
 	if len(args) < 1 {
-		fmt.Println("用法: go run main.go [-o 输出文件] <研究主题>")
+		fmt.Println("用法: go run main.go [-o 输出文件] [-simple] <研究主题>")
 		fmt.Println()
 		fmt.Println("参数:")
-		fmt.Println("  -o <文件>  指定输出文件路径 (可选)")
-		fmt.Println("  <研究主题>  要研究的主题 (必需)")
+		fmt.Println("  -o <文件>    指定输出文件路径 (可选)")
+		fmt.Println("  -simple      简单模式，跳过深度洞察和专家讨论 (可选)")
+		fmt.Println("  <研究主题>    要研究的主题 (必需)")
 		fmt.Println()
 		fmt.Println("示例:")
 		fmt.Println("  go run main.go \"人工智能的发展趋势\"")
 		fmt.Println("  go run main.go -o report.md \"人工智能的发展趋势\"")
-		fmt.Println("  go run main.go -o output.md \"Claude Code使用经验总结\"")
+		fmt.Println("  go run main.go -simple \"人工智能的发展趋势\"")
+		fmt.Println("  go run main.go -o output.md -simple \"Claude Code使用经验总结\"")
 		return
 	}
 
@@ -54,6 +58,7 @@ func main() {
 	// Initialize state
 	initialState := schema.NewDeepInsightState(query)
 	initialState.OutputFile = outputFile // Set output file if specified
+	initialState.SimpleMode = simpleMode // Set simple mode if specified
 
 	// Create graph with typed state *schema.DeepInsightState
 	workflow := graph.NewStateGraph[*schema.DeepInsightState]()
@@ -75,16 +80,24 @@ func main() {
 	// Add nodes
 	workflow.AddNode("query_engine", "Query research engine", wrapNode(query_engine.QueryEngineNode))
 	workflow.AddNode("media_engine", "Media search engine", wrapNode(media_engine.MediaEngineNode))
-	workflow.AddNode("insight_engine", "Insight generation engine", wrapNode(insight_engine.InsightEngineNode))
-	workflow.AddNode("forum_engine", "Expert forum discussion", wrapNode(forum_engine.ForumEngineNode))
 	workflow.AddNode("report_engine", "Report generation engine", wrapNode(report_engine.ReportEngineNode))
 
-	// Add edges
+	// Add edges based on mode
 	workflow.SetEntryPoint("query_engine")
 	workflow.AddEdge("query_engine", "media_engine")
-	workflow.AddEdge("media_engine", "insight_engine")
-	workflow.AddEdge("insight_engine", "forum_engine")
-	workflow.AddEdge("forum_engine", "report_engine")
+
+	if simpleMode {
+		// Simple mode: skip insight_engine and forum_engine
+		workflow.AddEdge("media_engine", "report_engine")
+	} else {
+		// Full mode: include insight_engine and forum_engine
+		workflow.AddNode("insight_engine", "Insight generation engine", wrapNode(insight_engine.InsightEngineNode))
+		workflow.AddNode("forum_engine", "Expert forum discussion", wrapNode(forum_engine.ForumEngineNode))
+		workflow.AddEdge("media_engine", "insight_engine")
+		workflow.AddEdge("insight_engine", "forum_engine")
+		workflow.AddEdge("forum_engine", "report_engine")
+	}
+
 	workflow.AddEdge("report_engine", graph.END)
 
 	// Compile graph

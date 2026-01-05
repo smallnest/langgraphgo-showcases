@@ -193,6 +193,9 @@ type DeepInsightState struct {
 
 	// Output file path (optional, if specified by -o flag)
 	OutputFile string `json:"output_file,omitempty"`
+
+	// Simple mode (skip insight_engine and forum_engine)
+	SimpleMode bool `json:"simple_mode,omitempty"`
 }
 
 func NewDeepInsightState(query string) *DeepInsightState {
