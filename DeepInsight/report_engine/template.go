@@ -24,14 +24,18 @@ const reportTemplate = `
 {{.Content | unescape}}
 {{end}}
 
+{{if .ShowMediaFindings}}
 ## 视觉和上下文信息 (MediaEngine)
 {{range .MediaFindings}}
 - {{.}}
 {{end}}
+{{end}}
 
+{{if .ShowDiscussion}}
 ## 专家讨论 (ForumEngine)
 {{range .Discussion}}
 > {{.}}
+{{end}}
 {{end}}
 
 ---
@@ -39,12 +43,14 @@ const reportTemplate = `
 `
 
 type ReportData struct {
-	Title         string
-	Date          string
-	Summary       string
-	Paragraphs    []ParagraphData
-	MediaFindings []string
-	Discussion    []string
+	Title            string
+	Date             string
+	Summary          string
+	Paragraphs       []ParagraphData
+	MediaFindings    []string
+	ShowMediaFindings bool
+	Discussion       []string
+	ShowDiscussion   bool
 }
 
 type ParagraphData struct {
@@ -97,12 +103,14 @@ func GenerateReport(state *schema.DeepInsightState, skipIncomplete bool) (string
 	}
 
 	data := ReportData{
-		Title:         fmt.Sprintf("深度洞察报告: %s", state.Query),
-		Date:          time.Now().Format("2006-01-02 15:04:05"),
-		Summary:       summary,
-		Paragraphs:    paragraphs,
-		MediaFindings: state.MediaResults,
-		Discussion:    state.Discussion,
+		Title:            fmt.Sprintf("深度洞察报告: %s", state.Query),
+		Date:             time.Now().Format("2006-01-02 15:04:05"),
+		Summary:          summary,
+		Paragraphs:       paragraphs,
+		MediaFindings:    state.MediaResults,
+		ShowMediaFindings: !state.SimpleMode, // Hide in simple mode
+		Discussion:       state.Discussion,
+		ShowDiscussion:   !state.SimpleMode, // Hide in simple mode
 	}
 
 	var buf bytes.Buffer
