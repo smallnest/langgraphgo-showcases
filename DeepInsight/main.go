@@ -79,20 +79,22 @@ func main() {
 
 	// Add nodes
 	workflow.AddNode("query_engine", "Query research engine", wrapNode(query_engine.QueryEngineNode))
-	workflow.AddNode("media_engine", "Media search engine", wrapNode(media_engine.MediaEngineNode))
 	workflow.AddNode("report_engine", "Report generation engine", wrapNode(report_engine.ReportEngineNode))
 
 	// Add edges based on mode
 	workflow.SetEntryPoint("query_engine")
-	workflow.AddEdge("query_engine", "media_engine")
 
 	if simpleMode {
-		// Simple mode: skip insight_engine and forum_engine
-		workflow.AddEdge("media_engine", "report_engine")
+		// Simple mode: query_engine -> insight_engine -> report_engine
+		workflow.AddNode("insight_engine", "Insight generation engine", wrapNode(insight_engine.InsightEngineNode))
+		workflow.AddEdge("query_engine", "insight_engine")
+		workflow.AddEdge("insight_engine", "report_engine")
 	} else {
-		// Full mode: include insight_engine and forum_engine
+		// Full mode: include media_engine and forum_engine
+		workflow.AddNode("media_engine", "Media search engine", wrapNode(media_engine.MediaEngineNode))
 		workflow.AddNode("insight_engine", "Insight generation engine", wrapNode(insight_engine.InsightEngineNode))
 		workflow.AddNode("forum_engine", "Expert forum discussion", wrapNode(forum_engine.ForumEngineNode))
+		workflow.AddEdge("query_engine", "media_engine")
 		workflow.AddEdge("media_engine", "insight_engine")
 		workflow.AddEdge("insight_engine", "forum_engine")
 		workflow.AddEdge("forum_engine", "report_engine")
