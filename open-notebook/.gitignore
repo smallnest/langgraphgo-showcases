@@ -1,0 +1,48 @@
+# Binaries
+open-notebook
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test and coverage files
+*.test
+*.out
+coverage.out
+coverage.html
+coverage.svg
+
+# Go workspace file
+go.work
+
+# Environment variables
+.env
+.env.local
+
+# Data directories
+data/
+*.db
+*.sqlite
+*.sqlite3
+
+# Uploads
+uploads/
+temp/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Node modules (if any)
+node_modules/
+
+# Logs
+*.log
+
+# OS files
+Thumbs.db
