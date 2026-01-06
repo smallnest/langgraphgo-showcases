@@ -73,7 +73,8 @@ func generateJSON(ctx context.Context, llm llms.Model, systemPrompt, userContent
 			}
 			fmt.Printf("⚠️  最后%d个字符: %q\n", lastN, content[len(content)-lastN:])
 		}
-		fmt.Println("========================================\n")
+		fmt.Println("========================================")
+		fmt.Println()
 		return fmt.Errorf("LLM返回的内容不是有效的JSON，长度=%d，已输出完整内容", len(content))
 	}
 
@@ -83,7 +84,8 @@ func generateJSON(ctx context.Context, llm llms.Model, systemPrompt, userContent
 		// 输出完整内容以便排查
 		fmt.Printf("\n========== LLM返回的JSON内容 (长度: %d) ==========\n", len(content))
 		fmt.Println(content)
-		fmt.Println("========================================\n")
+		fmt.Println("========================================")
+		fmt.Println()
 		return fmt.Errorf("JSON解析失败: %w，长度=%d，已输出完整内容", err, len(content))
 	}
 
@@ -336,6 +338,116 @@ func formatResults(results []schema.SearchResult) string {
 // fetchBackgroundDocuments performs an initial search using wechat_search to gather context
 // Returns a formatted string of document summaries for background context
 func fetchBackgroundDocuments(ctx context.Context, query string) (string, error) {
+	llm, err := GetLLM(ctx)
+	if err != nil {
+		return "", fmt.Errorf("获取LLM失败: %w", err)
+	}
+
+	// Step 1: Perform entity disambiguation to understand the query
+	fmt.Println("\n===== 实体消歧分析 =====")
+	arbiterResult, searchContexts, err := PerformEntityDisambiguation(ctx, llm, query)
+	if err != nil {
+		fmt.Printf("警告: 实体消歧失败: %v，将使用基础搜索\n", err)
+		// Fall back to basic search
+		return fetchBackgroundDocumentsBasic(ctx, query)
+	}
+
+	// Step 2: Display disambiguation results
+	fmt.Printf("\n✅ 实体识别结果:\n")
+	fmt.Printf("  实体名称: %s\n", arbiterResult.EntityName)
+	fmt.Printf("  实体类型: %s\n", arbiterResult.EntityType)
+	fmt.Printf("  置信度: %.2f\n", arbiterResult.Confidence)
+	fmt.Printf("  权威来源: %s\n", arbiterResult.PrimaryDomain)
+	fmt.Printf("  验证状态: %v\n", arbiterResult.IsVerified)
+	fmt.Printf("\n判断理由:\n  %s\n", arbiterResult.Reasoning)
+
+	// Step 3: Convert SearchContext back to schema.SearchResult for wechat_search
+	// If we already have high-quality results from disambiguation, use them
+	// Otherwise, perform additional wechat_search with the corrected entity name
+
+	var wechatResults []schema.SearchResult
+
+	// If confidence is high (>0.75) and we have good results, use them
+	if arbiterResult.Confidence > 0.75 && len(searchContexts) > 0 {
+		fmt.Println("\n使用实体消歧的结果作为背景文档...")
+		// Convert SearchContext to SearchResult
+		for _, sc := range searchContexts {
+			wechatResults = append(wechatResults, schema.SearchResult{
+				Title:         sc.Title,
+				URL:           sc.URL,
+				Content:       sc.Snippet,
+				Score:         sc.Score,
+				PublishedDate: sc.PublishDate,
+			})
+		}
+	} else {
+		// Perform additional wechat search with refined query
+		fmt.Println("\n置信度较低，执行额外的微信搜索...")
+		refinedQuery := query
+		if arbiterResult.EntityName != "" && arbiterResult.EntityName != query {
+			refinedQuery = fmt.Sprintf("%s %s", arbiterResult.EntityName, query)
+			fmt.Printf("优化查询: %s\n", refinedQuery)
+		}
+
+		wechatResults, err = ExecuteSearch(ctx, refinedQuery, "wechat_search", "", "")
+		if err != nil {
+			return "", fmt.Errorf("背景文档搜索失败: %w", err)
+		}
+	}
+
+	if len(wechatResults) == 0 {
+		return "（未找到相关背景文档）", nil
+	}
+
+	// Step 4: Format background documents with entity disambiguation info
+	maxDocs := 5
+	if len(wechatResults) < maxDocs {
+		maxDocs = len(wechatResults)
+	}
+
+	var sb strings.Builder
+
+	// Add entity disambiguation summary
+	sb.WriteString("## 实体消歧结果\n\n")
+	sb.WriteString(fmt.Sprintf("**查询**: %s\n", query))
+	sb.WriteString(fmt.Sprintf("**识别实体**: %s\n", arbiterResult.EntityName))
+	sb.WriteString(fmt.Sprintf("**实体类型**: %s\n", arbiterResult.EntityType))
+	sb.WriteString(fmt.Sprintf("**置信度**: %.2f\n\n", arbiterResult.Confidence))
+
+	sb.WriteString("## 背景文档\n\n")
+	sb.WriteString(fmt.Sprintf("找到 %d 篇相关文档（显示前 %d 篇）:\n\n", len(wechatResults), maxDocs))
+
+	for i := 0; i < maxDocs; i++ {
+		r := wechatResults[i]
+
+		// Calculate authority score for this result
+		domain := extractDomain(r.URL)
+		authorityScore := GetDomainAuthority(domain)
+
+		sb.WriteString(fmt.Sprintf("### 文档 %d: %s\n", i+1, r.Title))
+		sb.WriteString(fmt.Sprintf("**来源**: %s (权威度: %.0f)\n", domain, authorityScore))
+		if r.PublishedDate != "" {
+			sb.WriteString(fmt.Sprintf("**发布时间**: %s\n", r.PublishedDate))
+		}
+
+		// Get first 1000 characters of content
+		content := r.Content
+		if len(content) > 1000 {
+			content = content[:1000] + "..."
+		}
+		sb.WriteString(fmt.Sprintf("**内容摘要**: %s\n\n", content))
+	}
+
+	sb.WriteString("\n## 重要提示\n\n")
+	sb.WriteString(fmt.Sprintf("根据实体消歧分析，'%s' 被识别为 **%s** (置信度: %.2f)。\n",
+		query, arbiterResult.EntityName, arbiterResult.Confidence))
+	sb.WriteString("在规划报告结构时，请基于此识别结果进行。\n")
+
+	return sb.String(), nil
+}
+
+// fetchBackgroundDocumentsBasic is the fallback basic search without entity disambiguation
+func fetchBackgroundDocumentsBasic(ctx context.Context, query string) (string, error) {
 	// Use wechat_search to get relevant documents
 	results, err := ExecuteSearch(ctx, query, "wechat_search", "", "")
 	if err != nil {
