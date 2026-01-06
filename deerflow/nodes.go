@@ -33,6 +33,14 @@ func logf(ctx context.Context, format string, args ...any) {
 }
 
 // Typed node functions that wrap the untyped implementations
+func QueryAgentNodeTyped(ctx context.Context, state *State) (*State, error) {
+	result, err := QueryAgentNode(ctx, state)
+	if err != nil {
+		return nil, err
+	}
+	return result.(*State), nil
+}
+
 func PlannerNodeTyped(ctx context.Context, state *State) (*State, error) {
 	result, err := PlannerNode(ctx, state)
 	if err != nil {
@@ -43,6 +51,14 @@ func PlannerNodeTyped(ctx context.Context, state *State) (*State, error) {
 
 func ResearcherNodeTyped(ctx context.Context, state *State) (*State, error) {
 	result, err := ResearcherNode(ctx, state)
+	if err != nil {
+		return nil, err
+	}
+	return result.(*State), nil
+}
+
+func InsightAgentNodeTyped(ctx context.Context, state *State) (*State, error) {
+	result, err := InsightAgentNode(ctx, state)
 	if err != nil {
 		return nil, err
 	}
@@ -65,6 +81,91 @@ func PodcastNodeTyped(ctx context.Context, state *State) (*State, error) {
 	return result.(*State), nil
 }
 
+// QueryAgentNode analyzes user intent and performs entity disambiguation.
+func QueryAgentNode(ctx context.Context, state any) (any, error) {
+	s := state.(*State)
+	logf(ctx, "--- 查询分析节点：正在分析用户意图和实体消歧 ---\n")
+	logf(ctx, "原始查询: %s\n", s.Request.Query)
+
+	llm, err := getLLM()
+	if err != nil {
+		return nil, err
+	}
+
+	// 意图识别和实体消歧的提示词
+	prompt := fmt.Sprintf(`你是一位专业的查询分析专家。你的任务是深入分析用户的查询，识别真实意图，并进行实体消歧。
+
+## 用户查询
+%s
+
+## 你的任务
+
+### 1. 意图识别
+分析用户的真实意图：
+- **研究型意图**: 用户想深入了解某个主题的背景、原理、技术细节
+- **对比型意图**: 用户想比较多个选项的优缺点
+- **操作型意图**: 用户想学习如何使用某项技术或工具
+- **新闻型意图**: 用户想了解最新的动态和趋势
+- **概述型意图**: 用户想要一个全面的总结介绍
+
+### 2. 实体消歧
+识别查询中的关键实体，消除歧义：
+- 确认实体的真实含义（例如："Apple"可能是公司或水果）
+- 识别实体类型（AI模型、硬件、软件、概念等）
+- 提供实体的权威描述
+
+### 3. 查询优化
+基于意图识别和实体消歧的结果，优化查询以便获得更好的搜索结果。
+
+## 输出格式
+
+请以 JSON 格式返回结果：
+{
+    "user_intent": "识别的用户意图（研究型/对比型/操作型/新闻型/概述型）",
+    "refined_query": "优化后的查询描述",
+    "entity_info": "实体的详细信息，包括名称、类型、关键特征等",
+    "reasoning": "分析过程和判断理由"
+}
+
+必须使用中文回复。`, s.Request.Query)
+
+	completion, err := llms.GenerateFromSinglePrompt(ctx, llm, prompt)
+	if err != nil {
+		return nil, err
+	}
+
+	// Clean up JSON
+	completion = strings.TrimSpace(completion)
+	completion = strings.TrimPrefix(completion, "```json")
+	completion = strings.TrimPrefix(completion, "```")
+	completion = strings.TrimSuffix(completion, "```")
+	completion = strings.TrimSpace(completion)
+
+	var output struct {
+		UserIntent   string `json:"user_intent"`
+		RefinedQuery string `json:"refined_query"`
+		EntityInfo   string `json:"entity_info"`
+		Reasoning    string `json:"reasoning"`
+	}
+
+	if err := json.Unmarshal([]byte(completion), &output); err != nil {
+		logf(ctx, "JSON 解析失败 (%v)，使用默认值\n", err)
+		s.UserIntent = "研究型"
+		s.RefinedQuery = s.Request.Query
+		s.EntityInfo = "未能识别实体信息"
+	} else {
+		s.UserIntent = output.UserIntent
+		s.RefinedQuery = output.RefinedQuery
+		s.EntityInfo = output.EntityInfo
+	}
+
+	logf(ctx, "识别意图: %s\n", s.UserIntent)
+	logf(ctx, "优化查询: %s\n", s.RefinedQuery)
+	logf(ctx, "实体信息: %s\n", s.EntityInfo)
+
+	return s, nil
+}
+
 // PlannerNode generates a research plan based on the query.
 func PlannerNode(ctx context.Context, state any) (any, error) {
 	s := state.(*State)
@@ -75,14 +176,24 @@ func PlannerNode(ctx context.Context, state any) (any, error) {
 		return nil, err
 	}
 
-	prompt := fmt.Sprintf(`你是一名研究规划师。请为以下查询创建一个分步研究计划：%s。
+	// 使用优化后的查询进行规划
+	queryToUse := s.RefinedQuery
+	if queryToUse == "" {
+		queryToUse = s.Request.Query
+	}
+
+	prompt := fmt.Sprintf(`你是一名研究规划师。请为以下查询创建一个分步研究计划：%s
+
+用户意图识别: %s
+实体信息: %s
+
 同时，请判断用户是否希望同时生成播客（Podcast）脚本（例如查询中包含"播客"、"podcast"、"对话"、"脚本"等意图，或者用户明确要求生成播客）。
 请以 JSON 格式返回结果，格式如下：
 {
     "plan": ["步骤1", "步骤2", ...],
     "generate_podcast": true/false
 }
-必须使用中文回复。`, s.Request.Query)
+必须使用中文回复。`, queryToUse, s.UserIntent, s.EntityInfo)
 
 	completion, err := llms.GenerateFromSinglePrompt(ctx, llm, prompt)
 	if err != nil {
@@ -161,6 +272,164 @@ func ResearcherNode(ctx context.Context, state any) (any, error) {
 	return s, nil
 }
 
+// InsightAgentNode performs deep insight analysis based on research results.
+func InsightAgentNode(ctx context.Context, state any) (any, error) {
+	s := state.(*State)
+	logf(ctx, "--- 洞察分析节点：正在进行深度洞察分析 ---\n")
+
+	llm, err := getLLM()
+	if err != nil {
+		return nil, err
+	}
+
+	// 准备研究数据摘要
+	researchData := strings.Join(s.ResearchResults, "\n\n")
+
+	// 根据用户意图生成不同类型的洞察分析
+	var insightPrompt string
+	switch s.UserIntent {
+	case "研究型":
+		insightPrompt = fmt.Sprintf(`你是一位深度洞察分析师。基于以下研究结果，进行深层次的分析和洞察。
+
+## 原始查询
+%s
+
+## 用户意图
+研究型 - 用户希望深入了解该主题的背景、原理和技术细节
+
+## 实体信息
+%s
+
+## 研究结果
+%s
+
+## 你的任务
+请进行以下深度洞察分析：
+
+1. **核心要点提取**: 总结研究中的关键发现和核心观点
+2. **深层原理分析**: 分析背后的原理、机制和因果关系
+3. **趋势与模式识别**: 识别发展趋势和模式
+4. **关键洞察**: 提炼出有价值的深度洞察
+5. **实践意义**: 分析研究结果的实际应用价值
+
+请以结构化的 Markdown 格式输出分析结果，每个部分都要详细展开。
+必须使用中文回复。`, s.Request.Query, s.EntityInfo, researchData)
+	case "对比型":
+		insightPrompt = fmt.Sprintf(`你是一位对比分析专家。基于以下研究结果，进行全面的对比分析。
+
+## 原始查询
+%s
+
+## 用户意图
+对比型 - 用户希望比较不同选项的优缺点
+
+## 研究结果
+%s
+
+## 你的任务
+请进行以下对比分析：
+
+1. **选项识别**: 识别需要对比的主要选项
+2. **多维度对比**: 从多个维度进行详细对比（性能、成本、易用性等）
+3. **优缺点分析**: 分析每个选项的优势和劣势
+4. **适用场景**: 分析各选项的最佳使用场景
+5. **推荐建议**: 基于分析给出选择建议
+
+请以结构化的 Markdown 格式输出分析结果。
+必须使用中文回复。`, s.Request.Query, researchData)
+	case "操作型":
+		insightPrompt = fmt.Sprintf(`你是一位实践指南专家。基于以下研究结果，提炼实用的操作指南。
+
+## 原始查询
+%s
+
+## 用户意图
+操作型 - 用户希望学习如何使用某项技术或工具
+
+## 研究结果
+%s
+
+## 你的任务
+请提炼以下操作指南：
+
+1. **快速入门**: 提供快速上手的步骤
+2. **核心概念**: 解释关键概念和术语
+3. **最佳实践**: 总结行业最佳实践
+4. **常见问题**: 列出常见问题和解决方案
+5. **进阶技巧**: 提供进阶使用技巧
+
+请以结构化的 Markdown 格式输出指南。
+必须使用中文回复。`, s.Request.Query, researchData)
+	case "新闻型":
+		insightPrompt = fmt.Sprintf(`你是一位趋势分析专家。基于以下研究结果，分析最新动态和趋势。
+
+## 原始查询
+%s
+
+## 用户意图
+新闻型 - 用户希望了解最新的动态和趋势
+
+## 研究结果
+%s
+
+## 你的任务
+请进行以下趋势分析：
+
+1. **最新动态**: 总结最新的重要事件和发展
+2. **影响分析**: 分析这些动态的影响和意义
+3. **趋势预测**: 基于当前信息预测未来趋势
+4. **关键观点**: 提炼专家和业界的观点
+5. **关注重点**: 指出需要重点关注的方向
+
+请以结构化的 Markdown 格式输出分析结果。
+必须使用中文回复。`, s.Request.Query, researchData)
+	default: // 概述型或其他
+		insightPrompt = fmt.Sprintf(`你是一位综合分析专家。基于以下研究结果，进行全面的分析和总结。
+
+## 原始查询
+%s
+
+## 用户意图
+%s
+
+## 实体信息
+%s
+
+## 研究结果
+%s
+
+## 你的任务
+请进行全面的分析和总结：
+
+1. **核心要点**: 总结研究中的关键信息
+2. **深度分析**: 进行深入的分析和解读
+3. **洞察发现**: 提炼有价值的洞察
+4. **实用建议**: 提供实践建议
+5. **总结评价**: 给出综合评价
+
+请以结构化的 Markdown 格式输出分析结果，每个部分都要详细展开。
+必须使用中文回复。`, s.Request.Query, s.UserIntent, s.EntityInfo, researchData)
+	}
+
+	completion, err := llms.GenerateFromSinglePrompt(ctx, llm, insightPrompt)
+	if err != nil {
+		return nil, err
+	}
+
+	// 清理输出
+	completion = strings.TrimSpace(completion)
+	completion = strings.TrimPrefix(completion, "```markdown")
+	completion = strings.TrimPrefix(completion, "```")
+	completion = strings.TrimSuffix(completion, "```")
+
+	var insights []string
+	insights = append(insights, completion)
+	s.InsightResults = insights
+
+	logf(ctx, "深度洞察分析完成。\n")
+	return s, nil
+}
+
 // Replace image placeholders with actual image tags
 // Regex matches [IMAGE_X：Title] or [IMAGE_X:Title]
 var imgRe = regexp.MustCompile(`\[IMAGE_(\d+)[：:]([^\]]+)\]`)
@@ -177,15 +446,47 @@ func ReporterNode(ctx context.Context, state any) (any, error) {
 
 	researchData := strings.Join(s.ResearchResults, "\n\n")
 
+	// 包含洞察分析结果
+	insightData := ""
+	if len(s.InsightResults) > 0 {
+		insightData = "\n\n## 深度洞察分析\n\n" + strings.Join(s.InsightResults, "\n\n")
+	}
+
 	// Inform LLM about available images
 	imageInfo := ""
 	if len(s.Images) > 0 {
 		imageInfo = fmt.Sprintf("\n\n注意：研究过程中收集到 %d 张相关图片。在报告中适当的位置，你可以使用 [IMAGE_X：图片标题] 占位符来标记应该插入图片的位置（X 为 1 到 %d，图片标题为你为该图片起的标题）。例如：[IMAGE_1：某某图表]。请务必确保引用的图片与周围的文字内容高度相关，如果图片与当前段落无关，请不要强行插入。", len(s.Images), len(s.Images))
 	}
 
-	prompt := fmt.Sprintf("你是一名资深报告撰写员。请根据以下研究结果撰写一份全面的最终报告。使用 Markdown 格式，包含清晰的标题、要点，并在适当的地方使用代码块。数学公式请使用 ```math 代码块包裹，或者使用 $$...$$ (块级) 和 $...$ (行内) 包裹。不要透漏撰写人信息。%s必须使用中文撰写报告：\n\n%s\n\n原始查询是：%s", imageInfo, researchData, s.Request.Query)
+	// 构建完整的报告提示词
+	var prompt strings.Builder
+	if len(s.InsightResults) > 0 {
+		prompt.WriteString("你是一名资深报告撰写员。请根据以下研究结果和深度洞察分析，撰写一份全面、详细的最终报告。\n\n")
+		prompt.WriteString(fmt.Sprintf("## 用户查询\n%s\n\n", s.Request.Query))
+		prompt.WriteString(fmt.Sprintf("## 用户意图\n%s\n\n", s.UserIntent))
+		prompt.WriteString(fmt.Sprintf("## 实体信息\n%s\n\n", s.EntityInfo))
+		prompt.WriteString("## 研究结果\n")
+		prompt.WriteString(researchData)
+		prompt.WriteString("\n\n")
+		prompt.WriteString(insightData)
+		prompt.WriteString("\n\n## 你的任务\n")
+		prompt.WriteString("请整合以上信息，撰写一份结构完整、内容详实的专业报告。报告应该包含：\n\n")
+		prompt.WriteString("1. **执行摘要**: 简要概述研究主题和核心发现\n")
+		prompt.WriteString("2. **详细内容**: 基于研究结果展开详细分析\n")
+		prompt.WriteString("3. **深度洞察**: 整合深度洞察分析的关键观点\n")
+		prompt.WriteString("4. **结论建议**: 提供清晰的结论和实用建议\n\n")
+		prompt.WriteString("使用 Markdown 格式，包含清晰的标题、要点，并在适当的地方使用代码块。数学公式请使用 ```math 代码块包裹，或者使用 $$...$$ (块级) 和 $...$ (行内) 包裹。不要透漏撰写人信息。")
+		prompt.WriteString(imageInfo)
+		prompt.WriteString("\n\n必须使用中文撰写报告，确保报告内容详实、逻辑清晰、洞察深刻。")
+	} else {
+		prompt.WriteString("你是一名资深报告撰写员。请根据以下研究结果撰写一份全面的最终报告。使用 Markdown 格式，包含清晰的标题、要点，并在适当的地方使用代码块。数学公式请使用 ```math 代码块包裹，或者使用 $$...$$ (块级) 和 $...$ (行内) 包裹。不要透漏撰写人信息。")
+		prompt.WriteString(imageInfo)
+		prompt.WriteString("必须使用中文撰写报告：\n\n")
+		prompt.WriteString(researchData)
+		prompt.WriteString(fmt.Sprintf("\n\n原始查询是：%s", s.Request.Query))
+	}
 
-	completion, err := llms.GenerateFromSinglePrompt(ctx, llm, prompt)
+	completion, err := llms.GenerateFromSinglePrompt(ctx, llm, prompt.String())
 	if err != nil {
 		return nil, err
 	}
