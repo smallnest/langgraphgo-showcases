@@ -78,34 +78,32 @@ type Article struct {
 
 // Call executes the search and returns formatted article results.
 func (w *WeChatSearch) Call(ctx context.Context, input string) (string, error) {
-	articles, err := w.SearchArticles(ctx, input, w.Count)
+	results, err := w.Search(ctx, input, w.Count)
 	if err != nil {
 		return "", fmt.Errorf("failed to search articles: %w", err)
 	}
+	return FormatResults(results, input), nil
+}
 
-	if len(articles) == 0 {
-		return fmt.Sprintf("No articles found for query: %s", input), nil
+// Search implements the SearchTool interface.
+func (w *WeChatSearch) Search(ctx context.Context, query string, limit int) ([]SearchResult, error) {
+	articles, err := w.SearchArticles(ctx, query, limit)
+	if err != nil {
+		return nil, err
 	}
 
-	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("Found %d articles for: %s\n\n", len(articles), input))
-
-	for i, article := range articles {
-		sb.WriteString(fmt.Sprintf("%d. Title: %s\n", i+1, article.Title))
-		sb.WriteString(fmt.Sprintf("   Publish Time: %s\n", article.PublishTime))
-		sb.WriteString(fmt.Sprintf("   URL: %s\n", article.RealURL))
-		if article.Content != "" {
-			// Truncate content if too long
-			content := article.Content
-			if len(content) > 500 {
-				content = content[:500] + "..."
-			}
-			sb.WriteString(fmt.Sprintf("   Content: %s\n", content))
-		}
-		sb.WriteString("\n")
+	results := make([]SearchResult, 0, len(articles))
+	for _, article := range articles {
+		results = append(results, SearchResult{
+			Title:       article.Title,
+			URL:         article.RealURL,
+			PublishTime: article.PublishTime,
+			Content:     article.Content,
+			Source:      "微信公众号",
+		})
 	}
 
-	return sb.String(), nil
+	return results, nil
 }
 
 // SearchArticles searches WeChat articles via Sogou and returns the results.

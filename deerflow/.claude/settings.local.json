@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xargs:*)",
+      "Bash(go build:*)",
+      "Bash(cat:*)",
+      "Bash(./deerflow:*)",
+      "Bash(go run:*)",
+      "Bash(ls:*)",
+      "Bash(go test:*)",
+      "Bash(go mod tidy:*)",
+      "Bash(timeout 10 ./deerflow:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

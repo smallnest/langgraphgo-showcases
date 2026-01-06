@@ -81,6 +81,38 @@ func PodcastNodeTyped(ctx context.Context, state *State) (*State, error) {
 	return result.(*State), nil
 }
 
+func StructurePlannerNodeTyped(ctx context.Context, state *State) (*State, error) {
+	result, err := StructurePlannerNode(ctx, state)
+	if err != nil {
+		return nil, err
+	}
+	return result.(*State), nil
+}
+
+func ContentWriterNodeTyped(ctx context.Context, state *State) (*State, error) {
+	result, err := ContentWriterNode(ctx, state)
+	if err != nil {
+		return nil, err
+	}
+	return result.(*State), nil
+}
+
+func ReflectorNodeTyped(ctx context.Context, state *State) (*State, error) {
+	result, err := ReflectorNode(ctx, state)
+	if err != nil {
+		return nil, err
+	}
+	return result.(*State), nil
+}
+
+func ReviserNodeTyped(ctx context.Context, state *State) (*State, error) {
+	result, err := ReviserNode(ctx, state)
+	if err != nil {
+		return nil, err
+	}
+	return result.(*State), nil
+}
+
 // QueryAgentNode analyzes user intent and performs entity disambiguation.
 func QueryAgentNode(ctx context.Context, state any) (any, error) {
 	s := state.(*State)
@@ -182,7 +214,21 @@ func QueryAgentNode(ctx context.Context, state any) (any, error) {
 // PlannerNode generates a research plan based on the query.
 func PlannerNode(ctx context.Context, state any) (any, error) {
 	s := state.(*State)
-	logf(ctx, "--- 规划节点：正在为查询 '%s' 进行规划 ---\n", s.Request.Query)
+
+	// Parse section titles from ReportStructure
+	var sectionTitles []string
+	if s.ReportStructure != "" {
+		lines := strings.Split(s.ReportStructure, "\n")
+		for _, line := range lines {
+			line = strings.TrimSpace(line)
+			if strings.HasPrefix(line, "## ") && !strings.HasPrefix(line, "### ") {
+				title := strings.TrimPrefix(line, "## ")
+				sectionTitles = append(sectionTitles, title)
+			}
+		}
+	}
+
+	logf(ctx, "--- 规划节点：正在为 %d 个章节制定研究计划 ---\n", len(sectionTitles))
 
 	llm, err := getLLM()
 	if err != nil {
@@ -195,17 +241,171 @@ func PlannerNode(ctx context.Context, state any) (any, error) {
 		queryToUse = s.Request.Query
 	}
 
-	prompt := fmt.Sprintf(`你是一名研究规划师。请为以下查询创建一个分步研究计划：%s
+	// Build section list for prompt
+	var sectionsList strings.Builder
+	sectionsList.WriteString("## 报告章节\n\n")
+	for i, title := range sectionTitles {
+		sectionsList.WriteString(fmt.Sprintf("%d. %s\n", i+1, title))
+	}
 
-用户意图识别: %s
-实体信息: %s
+	prompt := fmt.Sprintf(`你是一名专业的研究规划师。你的任务是为报告的每个章节制定针对性的研究计划。
 
-同时，请判断用户是否希望同时生成播客（Podcast）脚本（例如查询中包含"播客"、"podcast"、"对话"、"脚本"等意图，或者用户明确要求生成播客）。
-请以 JSON 格式返回结果，格式如下：
+## 原始查询
+%s
+
+## 用户意图
+%s
+
+## 实体信息
+%s
+
+%s
+
+## 你的任务
+
+请为报告的每个章节制定具体的研究任务。每个章节的研究计划应该：
+
+1. **针对性强**: 研究任务应该紧扣该章节的主题和内容需求
+2. **可操作性强**: 研究任务应该明确具体，便于执行搜索和信息收集
+3. **覆盖全面**: 确保该章节所需的关键信息都被覆盖
+4. **搜索友好**: 研究任务应该适合作为搜索关键词
+
+## 输出格式
+
+请以 JSON 格式返回每个章节的研究计划：
+
 {
-    "plan": ["步骤1", "步骤2", ...],
+    "section_plans": [
+        "章节1的研究任务描述（适合搜索的具体关键词或问题）",
+        "章节2的研究任务描述",
+        ...
+    ],
     "generate_podcast": true/false
 }
+
+## 研究任务示例
+
+- 如果章节是"研究背景"，研究任务可能是："搜索XX技术的发展历史、演进过程和当前状况"
+- 如果章节是"技术原理"，研究任务可能是："搜索XX技术的核心原理、关键算法和实现机制"
+- 如果章节是"应用案例"，研究任务可能是："搜索XX技术在实际项目中的应用案例和成功故事"
+
+## 注意事项
+
+- 研究任务应该简洁明确，每条 10-30 字
+- 避免过于宽泛或过于具体
+- 优先考虑可以使用搜索工具找到的信息
+- 判断用户是否希望生成播客脚本（查询包含"播客"、"podcast"、"对话"、"脚本"等关键词时设为 true）
+
+必须使用中文回复。`, queryToUse, s.UserIntent, s.EntityInfo, sectionsList.String())
+
+	completion, err := llms.GenerateFromSinglePrompt(ctx, llm, prompt)
+	if err != nil {
+		return nil, err
+	}
+
+	// Clean up JSON
+	completion = strings.TrimSpace(completion)
+	completion = strings.TrimPrefix(completion, "```json")
+	completion = strings.TrimPrefix(completion, "```")
+	completion = strings.TrimSuffix(completion, "```")
+	completion = strings.TrimSpace(completion)
+
+	var output struct {
+		SectionPlans    []string `json:"section_plans"`
+		GeneratePodcast bool     `json:"generate_podcast"`
+	}
+
+	if err := json.Unmarshal([]byte(completion), &output); err != nil {
+		logf(ctx, "JSON 解析失败 (%v)，使用默认研究计划\n", err)
+		// Fallback: create generic research plans for each section
+		output.SectionPlans = make([]string, len(sectionTitles))
+		for i, title := range sectionTitles {
+			output.SectionPlans[i] = fmt.Sprintf("搜索关于「%s」的相关信息", title)
+		}
+		// Check for podcast intent
+		queryLower := strings.ToLower(queryToUse)
+		output.GeneratePodcast = strings.Contains(queryLower, "播客") || strings.Contains(queryLower, "podcast")
+	}
+
+	s.SectionPlans = output.SectionPlans
+	s.GeneratePodcast = output.GeneratePodcast
+
+	// Also set Plan for compatibility
+	s.Plan = output.SectionPlans
+
+	// Format plans for better readability
+	logf(ctx, "为各章节制定的研究计划：\n")
+	for i, plan := range output.SectionPlans {
+		if i < len(sectionTitles) {
+			logf(ctx, "  [%d] %s\n  -> %s\n", i+1, sectionTitles[i], plan)
+		} else {
+			logf(ctx, "  [%d] %s\n", i+1, plan)
+		}
+	}
+	if s.GeneratePodcast {
+		logf(ctx, "检测到播客生成意图。\n")
+	}
+
+	return s, nil
+}
+
+// StructurePlannerNode determines the optimal report structure based on the query.
+func StructurePlannerNode(ctx context.Context, state any) (any, error) {
+	s := state.(*State)
+	logf(ctx, "--- 结构规划节点：正在确定报告结构 ---\n")
+
+	llm, err := getLLM()
+	if err != nil {
+		return nil, err
+	}
+
+	// 使用优化后的查询
+	queryToUse := s.RefinedQuery
+	if queryToUse == "" {
+		queryToUse = s.Request.Query
+	}
+
+	prompt := fmt.Sprintf(`你是一位专业的报告结构规划师。基于用户查询，为报告确定最优的结构。
+
+## 用户查询
+%s
+
+## 用户意图
+%s
+
+## 实体信息
+%s
+
+## 你的任务
+
+请分析查询内容，设计一个最适合该主题的报告结构。结构应该：
+
+1. **逻辑清晰**: 章节之间有明确的逻辑关系
+2. **内容全面**: 覆盖主题的所有重要方面
+3. **层次分明**: 主要章节和子章节划分合理
+4. **详实具体**: 每个章节都有明确的内容指向
+
+## 输出格式
+
+请以 JSON 格式返回报告结构：
+
+{
+    "structure": "报告结构的 Markdown 格式大纲（使用 ## 表示主要章节，### 表示子章节）",
+    "sections": [
+        "章节1的完整标题",
+        "章节2的完整标题",
+        ...
+    ]
+}
+
+要求：
+- 报告应该包含 3-6 个主要章节
+- 每个章节都应该是独立的、有意义的内容单元
+- 章节标题应该清晰明了，反映该章节的核心内容
+- 必须包含"执行摘要"或"概述"作为第一个章节
+- 必须包含"结论与建议"或类似章节作为最后一个章节
+- 根据主题特点，决定是否需要"背景介绍"、"技术细节"、"案例分析"、"对比分析"等章节
+
 必须使用中文回复。`, queryToUse, s.UserIntent, s.EntityInfo)
 
 	completion, err := llms.GenerateFromSinglePrompt(ctx, llm, prompt)
@@ -221,63 +421,175 @@ func PlannerNode(ctx context.Context, state any) (any, error) {
 	completion = strings.TrimSpace(completion)
 
 	var output struct {
-		Plan            []string `json:"plan"`
-		GeneratePodcast bool     `json:"generate_podcast"`
+		Structure string   `json:"structure"`
+		Sections  []string `json:"sections"`
 	}
 
 	if err := json.Unmarshal([]byte(completion), &output); err != nil {
-		logf(ctx, "JSON 解析失败 (%v)，尝试简单解析\n", err)
-		// Fallback: simple parsing
-		lines := strings.Split(completion, "\n")
-		var plan []string
-		for _, line := range lines {
-			trimmed := strings.TrimSpace(line)
-			if trimmed != "" && !strings.HasPrefix(trimmed, "{") && !strings.HasPrefix(trimmed, "}") {
-				plan = append(plan, trimmed)
-			}
+		logf(ctx, "JSON 解析失败 (%v)，使用默认结构\n", err)
+		// Fallback to default structure
+		output.Structure = `## 执行摘要
+
+## 研究背景
+
+## 详细分析
+
+## 结论与建议`
+		output.Sections = []string{
+			"执行摘要",
+			"研究背景",
+			"详细分析",
+			"结论与建议",
 		}
-		s.Plan = plan
-		// Default to false if JSON parsing fails, unless we find keywords in query
-		queryLower := strings.ToLower(s.Request.Query)
-		s.GeneratePodcast = strings.Contains(queryLower, "播客") || strings.Contains(queryLower, "podcast")
-	} else {
-		s.Plan = output.Plan
-		s.GeneratePodcast = output.GeneratePodcast
 	}
 
-	// Format plan for better readability
-	var formattedPlan strings.Builder
-	formattedPlan.WriteString("生成的计划：\n")
-	for _, step := range s.Plan {
-		formattedPlan.WriteString(fmt.Sprintf("%s\n", step))
-	}
-	logf(ctx, "%s", formattedPlan.String())
-	if s.GeneratePodcast {
-		logf(ctx, "检测到播客生成意图。\n")
+	s.ReportStructure = output.Structure
+	s.ReportSections = make([]string, len(output.Sections))
+	s.CurrentSection = 0
+
+	logf(ctx, "确定的报告结构（%d 个章节）：\n%s\n", len(output.Sections), output.Structure)
+	for i, section := range output.Sections {
+		logf(ctx, "  %d. %s\n", i+1, section)
 	}
 
 	return s, nil
 }
 
-// ResearcherNode executes the research plan using LLM.
+// ResearcherNode executes the research plan using LLM and search tools.
 func ResearcherNode(ctx context.Context, state any) (any, error) {
 	s := state.(*State)
-	logf(ctx, "--- 研究节点：正在执行计划（使用 LLM） ---\n")
+
+	// Use SectionPlans if available, otherwise fall back to Plan
+	plans := s.SectionPlans
+	if len(plans) == 0 {
+		plans = s.Plan
+	}
+
+	// Parse section titles
+	var sectionTitles []string
+	if s.ReportStructure != "" {
+		lines := strings.Split(s.ReportStructure, "\n")
+		for _, line := range lines {
+			line = strings.TrimSpace(line)
+			if strings.HasPrefix(line, "## ") && !strings.HasPrefix(line, "### ") {
+				title := strings.TrimPrefix(line, "## ")
+				sectionTitles = append(sectionTitles, title)
+			}
+		}
+	}
+
+	logf(ctx, "--- 研究节点：正在执行研究计划（%d 个任务） ---\n", len(plans))
 
 	llm, err := getLLM()
 	if err != nil {
 		return nil, err
 	}
 
+	// Create search helper
+	searchHelper := NewSearchHelper()
+
 	var results []string
-	for _, step := range s.Plan {
-		logf(ctx, "正在研究步骤：%s\n", step)
-		prompt := fmt.Sprintf("你是一名研究员。请为这个研究步骤查找详细信息：%s。提供发现摘要。必须使用中文回复。", step)
+	for i, step := range plans {
+		// Get section title if available
+		sectionTitle := ""
+		if i < len(sectionTitles) {
+			sectionTitle = sectionTitles[i]
+		} else {
+			sectionTitle = fmt.Sprintf("章节 %d", i+1)
+		}
+
+		logf(ctx, "正在研究: [%s] %s\n", sectionTitle, step)
+
+		// First, try to search using available tools
+		searchResults := searchHelper.ExecuteSearch(ctx, step, 5)
+
+		// Determine if we need to summarize the search results first
+		// If search results are very long (>10000 chars), use a two-step approach:
+		// Step 1: Summarize the search results
+		// Step 2: Generate the chapter research materials based on the summary
+		var researchMaterials string
+		if len(searchResults) > 10000 && len(searchResults) > 0 {
+			logf(ctx, "搜索结果过长 (%d 字符)，先进行摘要...\n", len(searchResults))
+
+			// Step 1: Summarize the search results
+			summarizePrompt := fmt.Sprintf(`你是一名专业的研究助理。请将以下搜索结果进行精炼的摘要。
+
+## 研究任务
+%s
+
+## 搜索结果（原文）
+%s
+
+## 你的任务
+请将上述搜索结果摘要为约 2000 字的内容，要求：
+1. **保留核心信息**: 保留所有重要的数据、事实、观点和结论
+2. **逻辑清晰**: 按照主题分类组织内容
+3. **详实具体**: 不要省略重要的细节和数据
+4. **结构分明**: 使用适当的标题和分段
+
+请直接输出摘要内容，不要包含"摘要如下"等引导语。
+必须使用中文回复。`, step, searchResults)
+
+			summary, err := llms.GenerateFromSinglePrompt(ctx, llm, summarizePrompt)
+			if err != nil {
+				logf(ctx, "摘要失败，直接使用原始搜索结果: %v\n", err)
+				researchMaterials = searchResults
+			} else {
+				logf(ctx, "摘要完成 (%d 字符 -> %d 字符)\n", len(searchResults), len(summary))
+				researchMaterials = summary
+			}
+		} else {
+			researchMaterials = searchResults
+		}
+
+		// Step 2: Generate chapter research materials
+		var prompt string
+		if len(researchMaterials) > 0 {
+			prompt = fmt.Sprintf(`你是一名专业的研究员。请基于以下研究材料，为 "%s" 章节提供详细的研究内容。
+
+## 章节
+%s
+
+## 研究任务
+%s
+
+## 研究材料
+%s
+
+## 你的任务
+请综合以上研究材料，为该章节提供：
+1. **关键信息摘要**: 用3-5句话总结核心发现
+2. **重要见解**: 列出3-5个关键要点
+3. **具体细节**: 补充重要的背景信息和细节
+4. **数据支持**: 提供具体的数据、案例或实例
+
+请以结构化的方式输出，每一点都要详细展开（每点至少50字）。
+必须使用中文回复。`, sectionTitle, sectionTitle, step, researchMaterials)
+		} else {
+			// Fallback to pure LLM generation if no search results
+			prompt = fmt.Sprintf(`你是一名专业的研究员。请为 "%s" 章节提供详细的研究材料。
+
+## 章节
+%s
+
+## 研究任务
+%s
+
+请提供：
+1. **关键信息摘要**: 用3-5句话总结核心发现
+2. **重要见解**: 列出3-5个关键要点
+3. **具体细节**: 补充重要的背景信息和细节
+4. **数据支持**: 提供具体的数据、案例或实例
+
+请以结构化的方式输出，每一点都要详细展开（每点至少50字）。
+必须使用中文回复。`, sectionTitle, sectionTitle, step)
+		}
+
 		completion, err := llms.GenerateFromSinglePrompt(ctx, llm, prompt)
 		if err != nil {
 			return nil, err
 		}
-		results = append(results, fmt.Sprintf("Step: %s\nFindings: %s", step, completion))
+		results = append(results, fmt.Sprintf("## 章节：%s\n\n研究任务：%s\n\n%s", sectionTitle, step, completion))
 	}
 
 	s.ResearchResults = results
@@ -435,11 +747,511 @@ func InsightAgentNode(ctx context.Context, state any) (any, error) {
 	completion = strings.TrimPrefix(completion, "```")
 	completion = strings.TrimSuffix(completion, "```")
 
-	var insights []string
-	insights = append(insights, completion)
-	s.InsightResults = insights
-
+	// Note: This node is no longer used in the main workflow
+	// The field has been removed from State struct
 	logf(ctx, "深度洞察分析完成。\n")
+	return s, nil
+}
+
+// ContentWriterNode writes content for a specific section of the report.
+func ContentWriterNode(ctx context.Context, state any) (any, error) {
+	s := state.(*State)
+
+	// Get the current section index
+	idx := s.CurrentSection
+
+	// Get section titles
+	var sectionTitles []string
+	if s.ReportStructure != "" {
+		// Parse section titles from structure
+		lines := strings.Split(s.ReportStructure, "\n")
+		for _, line := range lines {
+			line = strings.TrimSpace(line)
+			if strings.HasPrefix(line, "## ") && !strings.HasPrefix(line, "### ") {
+				title := strings.TrimPrefix(line, "## ")
+				sectionTitles = append(sectionTitles, title)
+			}
+		}
+	}
+
+	// Get current section title
+	currentSectionTitle := ""
+	if idx < len(sectionTitles) {
+		currentSectionTitle = sectionTitles[idx]
+	} else if idx < len(s.ReportSections) {
+		// Try to get title from ReportSections (should have been populated)
+		// Since ReportSections is empty initially, we need a fallback
+		currentSectionTitle = fmt.Sprintf("章节 %d", idx+1)
+	}
+
+	logf(ctx, "--- 内容写作节点：正在撰写「%s」(%d/%d) ---\n", currentSectionTitle, idx+1, len(s.ReportSections))
+
+	llm, err := getLLM()
+	if err != nil {
+		return nil, err
+	}
+
+	// Prepare research data for the current section
+	// Only use the research results that correspond to this section
+	var researchData string
+	if idx < len(s.ResearchResults) {
+		researchData = s.ResearchResults[idx]
+	} else {
+		// Fallback: join all research results if index out of bounds
+		researchData = strings.Join(s.ResearchResults, "\n\n")
+	}
+
+	// If research data is still too long, summarize it first
+	var finalResearchMaterial string
+	if len(researchData) > 15000 && len(researchData) > 0 {
+		logf(ctx, "研究材料过长 (%d 字符)，先进行摘要...\n", len(researchData))
+
+		summarizePrompt := fmt.Sprintf(`你是一名专业的研究助理。请将以下研究材料进行精炼的摘要。
+
+## 目标章节
+%s
+
+## 研究材料（原文）
+%s
+
+## 你的任务
+请将上述研究材料摘要为约 2000 字的内容，要求：
+1. **保留核心信息**: 保留所有重要的数据、事实、观点和结论
+2. **逻辑清晰**: 按照主题分类组织内容
+3. **详实具体**: 不要省略重要的细节和数据
+4. **结构分明**: 使用适当的标题和分段
+
+请直接输出摘要内容，不要包含"摘要如下"等引导语。
+必须使用中文回复。`, currentSectionTitle, researchData)
+
+		summary, err := llms.GenerateFromSinglePrompt(ctx, llm, summarizePrompt)
+		if err != nil {
+			logf(ctx, "摘要失败，直接使用原始研究材料: %v\n", err)
+			finalResearchMaterial = researchData
+		} else {
+			logf(ctx, "摘要完成 (%d 字符 -> %d 字符)\n", len(researchData), len(summary))
+			finalResearchMaterial = summary
+		}
+	} else {
+		finalResearchMaterial = researchData
+	}
+
+	// Prepare context from previously written sections
+	var previousSections strings.Builder
+	if idx > 0 {
+		previousSections.WriteString("## 已完成的章节内容（供参考）\n\n")
+		for i := 0; i < idx; i++ {
+			if i < len(s.ReportSections) && s.ReportSections[i] != "" {
+				title := ""
+				if i < len(sectionTitles) {
+					title = sectionTitles[i]
+				} else {
+					title = fmt.Sprintf("章节 %d", i+1)
+				}
+				previousSections.WriteString(fmt.Sprintf("### %s\n\n%s\n\n", title, s.ReportSections[i]))
+			}
+		}
+	}
+
+	// Get section titles for context
+	var allSections strings.Builder
+	allSections.WriteString("## 报告章节规划\n\n")
+	for i, title := range sectionTitles {
+		prefix := "  "
+		if i == idx {
+			prefix = "-> "
+		}
+		allSections.WriteString(fmt.Sprintf("%s%d. %s\n", prefix, i+1, title))
+	}
+
+	// Build prompt for writing the current section
+	queryToUse := s.RefinedQuery
+	if queryToUse == "" {
+		queryToUse = s.Request.Query
+	}
+
+	prompt := fmt.Sprintf(`你是一位专业的技术报告撰写专家。请为报告撰写指定的章节内容。
+
+## 原始查询
+%s
+
+## 用户意图
+%s
+
+## 实体信息
+%s
+
+%s
+
+## 当前章节
+**序号**: %d / %d
+**标题**: %s
+
+## 你的任务
+
+请为该章节撰写详细、专业的内容。
+
+### 内容要求
+1. **内容详实**: 至少 500 字，内容充实具体
+2. **逻辑清晰**: 条理分明，层次清楚
+3. **专业准确**: 使用专业术语，表述准确
+4. **论据充分**: 基于研究结果，有理有据
+5. **可读性强**: 语言流畅，易于理解
+
+### 格式要求
+- 使用 Markdown 格式
+- 适当使用子标题（###）组织内容
+- 使用列表（- 或 1.）列出要点
+- 关键概念使用**加粗**突出
+- 需要时使用代码块展示技术内容
+
+### 注意事项
+- 这是整个报告的一部分，不需要完整的开头和结尾
+- 内容应该紧扣章节标题，不要偏离主题
+- 充分利用研究结果中的信息和数据
+- 如果是技术章节，应该包含具体的技术细节和实现方法
+- 如果是分析章节，应该包含深入的分析和见解
+- 保持客观、专业的语气
+
+必须使用中文撰写。`,
+		queryToUse,
+		s.UserIntent,
+		s.EntityInfo,
+		allSections.String(),
+		idx+1,
+		len(s.ReportSections),
+		currentSectionTitle)
+
+	// Add previous sections as context if available
+	if previousSections.Len() > 0 {
+		prompt += fmt.Sprintf("\n\n%s\n--- 研究数据 ---\n\n%s\n\n", previousSections.String(), finalResearchMaterial)
+	} else {
+		prompt += fmt.Sprintf("\n\n--- 研究数据 ---\n\n%s\n\n", finalResearchMaterial)
+	}
+
+	prompt += "请直接输出该章节的详细内容，不要包含章节标题（标题会自动添加）。"
+
+	completion, err := llms.GenerateFromSinglePrompt(ctx, llm, prompt)
+	if err != nil {
+		return nil, err
+	}
+
+	// Clean up the output
+	completion = strings.TrimSpace(completion)
+	completion = strings.TrimPrefix(completion, "```markdown")
+	completion = strings.TrimPrefix(completion, "```")
+	completion = strings.TrimSuffix(completion, "```")
+
+	// Store the written content
+	s.ReportSections[idx] = completion
+
+	logf(ctx, "章节「%s」撰写完成（%d 字符）\n", currentSectionTitle, len(completion))
+
+	return s, nil
+}
+
+// ReflectorNode reflects on the current section content to check if it meets requirements
+func ReflectorNode(ctx context.Context, state any) (any, error) {
+	s := state.(*State)
+	idx := s.CurrentSection
+
+	// Get section title
+	var sectionTitles []string
+	if s.ReportStructure != "" {
+		lines := strings.Split(s.ReportStructure, "\n")
+		for _, line := range lines {
+			line = strings.TrimSpace(line)
+			if strings.HasPrefix(line, "## ") && !strings.HasPrefix(line, "### ") {
+				title := strings.TrimPrefix(line, "## ")
+				sectionTitles = append(sectionTitles, title)
+			}
+		}
+	}
+
+	currentSectionTitle := ""
+	if idx < len(sectionTitles) {
+		currentSectionTitle = sectionTitles[idx]
+	} else {
+		currentSectionTitle = fmt.Sprintf("章节 %d", idx+1)
+	}
+
+	// Initialize reflection results array if needed
+	if s.ReflectionResults == nil {
+		s.ReflectionResults = make([]string, len(s.ReportSections))
+	}
+
+	// Get current section content
+	currentContent := s.ReportSections[idx]
+	if currentContent == "" {
+		logf(ctx, "--- 反思节点：章节「%s」内容为空，跳过反思 ---\n", currentSectionTitle)
+		s.ReflectionResults[idx] = "无需补充：内容为空"
+		return s, nil
+	}
+
+	logf(ctx, "--- 反思节点：正在检查章节「%s」内容质量 ---\n", currentSectionTitle)
+
+	llm, err := getLLM()
+	if err != nil {
+		return nil, err
+	}
+
+	// Get section plan for context
+	sectionPlan := ""
+	if idx < len(s.SectionPlans) {
+		sectionPlan = s.SectionPlans[idx]
+	}
+
+	// Build reflection prompt
+	prompt := fmt.Sprintf(`你是一名专业的质量审查专家。请对以下章节内容进行审查和评估。
+
+## 章节
+标题：%s
+
+## 研究任务
+%s
+
+## 章节内容
+%s
+
+## 审查标准
+
+请从以下维度评估该章节内容：
+
+1. **内容完整性** (150字以上)
+   - 是否覆盖了章节主题的所有重要方面？
+   - 是否遗漏了关键信息或要点？
+
+2. **内容详实度** (150字以上)
+   - 内容是否充实具体？
+   - 是否有足够的细节、数据和案例支撑？
+
+3. **逻辑清晰度** (100字以上)
+   - 内容结构是否清晰？
+   - 论述逻辑是否连贯？
+
+4. **专业准确性** (100字以上)
+   - 专业术语使用是否准确？
+   - 技术描述是否准确无误？
+
+5. **可读性** (100字以上)
+   - 语言表达是否流畅？
+   - 是否易于理解？
+
+## 输出格式
+
+请以 JSON 格式返回评估结果：
+
+{
+    "overall_assessment": "整体评价（优/良/中/差）",
+    "needs_revision": true/false,
+    "missing_points": [
+        "缺失点1的详细描述",
+        "缺失点2的详细描述",
+        ...
+    ],
+    "revision_suggestions": [
+        "改进建议1",
+        "改进建议2",
+        ...
+    ],
+    "strengths": [
+        "优点1",
+        "优点2"
+    ],
+    "detailed_feedback": "详细的反馈意见（300字以上）"
+}
+
+## 判断标准
+
+- 如果内容质量达到"良"或"优"的水平，且没有明显缺失，则 needs_revision 设为 false
+- 如果存在明显的内容缺失、质量问题或不足，则 needs_revision 设为 true
+
+必须使用中文回复。`, currentSectionTitle, sectionPlan, currentContent)
+
+	completion, err := llms.GenerateFromSinglePrompt(ctx, llm, prompt)
+	if err != nil {
+		logf(ctx, "反思失败: %v，标记为无需补充\n", err)
+		s.ReflectionResults[idx] = "无需补充：反思过程出错"
+		return s, nil
+	}
+
+	// Clean up JSON
+	completion = strings.TrimSpace(completion)
+	completion = strings.TrimPrefix(completion, "```json")
+	completion = strings.TrimPrefix(completion, "```")
+	completion = strings.TrimSuffix(completion, "```")
+	completion = strings.TrimSpace(completion)
+
+	// Parse reflection result
+	var reflection struct {
+		OverallAssessment   string   `json:"overall_assessment"`
+		NeedsRevision       bool     `json:"needs_revision"`
+		MissingPoints       []string `json:"missing_points"`
+		RevisionSuggestions []string `json:"revision_suggestions"`
+		Strengths           []string `json:"strengths"`
+		DetailedFeedback    string   `json:"detailed_feedback"`
+	}
+
+	if err := json.Unmarshal([]byte(completion), &reflection); err != nil {
+		logf(ctx, "反思结果解析失败: %v，使用默认判断\n", err)
+		// Default: if content is too short, mark for revision
+		if len(currentContent) < 500 {
+			reflection.NeedsRevision = true
+			reflection.MissingPoints = []string{"内容过短，需要扩展到至少500字"}
+			reflection.DetailedFeedback = "内容长度不足，需要补充更多细节"
+		} else {
+			reflection.NeedsRevision = false
+			reflection.DetailedFeedback = "内容长度达标"
+		}
+	}
+
+	// Store reflection result
+	reflectionSummary := fmt.Sprintf("整体评价: %s | 需要补充: %v", reflection.OverallAssessment, reflection.NeedsRevision)
+	if reflection.DetailedFeedback != "" {
+		reflectionSummary += fmt.Sprintf("\n反馈: %s", reflection.DetailedFeedback)
+	}
+	s.ReflectionResults[idx] = reflectionSummary
+
+	if reflection.NeedsRevision {
+		logf(ctx, "反思结果：需要补充（%s）\n", reflection.OverallAssessment)
+		if len(reflection.MissingPoints) > 0 {
+			for _, point := range reflection.MissingPoints {
+				logf(ctx, "  - %s\n", point)
+			}
+		}
+		if len(reflection.RevisionSuggestions) > 0 {
+			logf(ctx, "改进建议：\n")
+			for _, suggestion := range reflection.RevisionSuggestions {
+				logf(ctx, "  - %s\n", suggestion)
+			}
+		}
+	} else {
+		logf(ctx, "反思结果：内容合格（%s）\n", reflection.OverallAssessment)
+		if len(reflection.Strengths) > 0 {
+			logf(ctx, "优点：\n")
+			for _, strength := range reflection.Strengths {
+				logf(ctx, "  - %s\n", strength)
+			}
+		}
+	}
+
+	return s, nil
+}
+
+// ReviserNode revises the current section content based on reflection feedback
+func ReviserNode(ctx context.Context, state any) (any, error) {
+	s := state.(*State)
+	idx := s.CurrentSection
+
+	// Get section title
+	var sectionTitles []string
+	if s.ReportStructure != "" {
+		lines := strings.Split(s.ReportStructure, "\n")
+		for _, line := range lines {
+			line = strings.TrimSpace(line)
+			if strings.HasPrefix(line, "## ") && !strings.HasPrefix(line, "### ") {
+				title := strings.TrimPrefix(line, "## ")
+				sectionTitles = append(sectionTitles, title)
+			}
+		}
+	}
+
+	currentSectionTitle := ""
+	if idx < len(sectionTitles) {
+		currentSectionTitle = sectionTitles[idx]
+	} else {
+		currentSectionTitle = fmt.Sprintf("章节 %d", idx+1)
+	}
+
+	// Get revision count
+	revisionCount := 0
+	if s.RevisionCounts != nil && idx < len(s.RevisionCounts) {
+		revisionCount = s.RevisionCounts[idx]
+	}
+
+	logf(ctx, "--- 补充节点：正在补充章节「%s」内容（第 %d 轮）---\n", currentSectionTitle, revisionCount+1)
+
+	llm, err := getLLM()
+	if err != nil {
+		return nil, err
+	}
+
+	// Get current content
+	currentContent := s.ReportSections[idx]
+
+	// Get reflection feedback
+	reflection := s.ReflectionResults[idx]
+
+	// Get section plan
+	sectionPlan := ""
+	if idx < len(s.SectionPlans) {
+		sectionPlan = s.SectionPlans[idx]
+	}
+
+	// Get research data for this section
+	var researchData string
+	if idx < len(s.ResearchResults) {
+		researchData = s.ResearchResults[idx]
+	}
+
+	// Build revision prompt
+	prompt := fmt.Sprintf(`你是一名专业的内容编辑。请根据反馈意见对章节内容进行补充和完善。
+
+## 章节
+标题：%s
+
+## 研究任务
+%s
+
+## 当前内容
+%s
+
+## 反思反馈
+%s
+
+## 研究数据
+%s
+
+## 你的任务
+
+请根据反思反馈中的建议，对当前内容进行补充和完善：
+
+1. **补充缺失内容**: 针对 feedback 中指出的缺失点，补充相关内容
+2. **扩展细节**: 在现有内容基础上，增加更多细节、数据和案例
+3. **改进表达**: 优化语言表达，提高可读性
+4. **保持连贯**: 确保补充内容与原内容自然衔接
+
+## 输出要求
+
+- 直接输出完整的章节内容（包含原内容和补充内容）
+- 不要包含章节标题（标题会自动添加）
+- 保持原有的结构和格式
+- 补充内容应该自然融入，不要显得突兀
+
+## 补充轮次
+这是第 %d 轮补充，请确保每次补充都能实质性提升内容质量。
+
+必须使用中文回复。`, currentSectionTitle, sectionPlan, currentContent, reflection, researchData, revisionCount+1)
+
+	completion, err := llms.GenerateFromSinglePrompt(ctx, llm, prompt)
+	if err != nil {
+		return nil, err
+	}
+
+	// Clean up the output
+	completion = strings.TrimSpace(completion)
+	completion = strings.TrimPrefix(completion, "```markdown")
+	completion = strings.TrimPrefix(completion, "```")
+	completion = strings.TrimSuffix(completion, "```")
+
+	// Update the section content
+	oldLength := len(currentContent)
+	s.ReportSections[idx] = completion
+	newLength := len(completion)
+
+	logf(ctx, "章节「%s」补充完成（%d -> %d 字符，增加 %d 字符）\n",
+		currentSectionTitle, oldLength, newLength, newLength-oldLength)
+
 	return s, nil
 }
 
@@ -447,70 +1259,72 @@ func InsightAgentNode(ctx context.Context, state any) (any, error) {
 // Regex matches [IMAGE_X：Title] or [IMAGE_X:Title]
 var imgRe = regexp.MustCompile(`\[IMAGE_(\d+)[：:]([^\]]+)\]`)
 
-// ReporterNode compiles the final report.
+// ReporterNode compiles the final report from pre-written sections.
 func ReporterNode(ctx context.Context, state any) (any, error) {
 	s := state.(*State)
-	logf(ctx, "--- 报告节点：正在生成最终报告 ---\n")
+	logf(ctx, "--- 报告节点：正在编译最终报告 ---\n")
 
-	llm, err := getLLM()
-	if err != nil {
-		return nil, err
+	// Parse section titles from ReportStructure
+	var sectionTitles []string
+	if s.ReportStructure != "" {
+		lines := strings.Split(s.ReportStructure, "\n")
+		for _, line := range lines {
+			line = strings.TrimSpace(line)
+			if strings.HasPrefix(line, "## ") && !strings.HasPrefix(line, "### ") {
+				title := strings.TrimPrefix(line, "## ")
+				sectionTitles = append(sectionTitles, title)
+			}
+		}
 	}
 
-	researchData := strings.Join(s.ResearchResults, "\n\n")
+	// Build the complete markdown report by combining all sections
+	var reportBuilder strings.Builder
 
-	// 包含洞察分析结果
-	insightData := ""
-	if len(s.InsightResults) > 0 {
-		insightData = "\n\n## 深度洞察分析\n\n" + strings.Join(s.InsightResults, "\n\n")
+	// Add title
+	queryToUse := s.RefinedQuery
+	if queryToUse == "" {
+		queryToUse = s.Request.Query
+	}
+	reportBuilder.WriteString(fmt.Sprintf("# %s\n\n", queryToUse))
+	reportBuilder.WriteString(fmt.Sprintf("*生成时间: 2024年*\n\n"))
+
+	// // Add metadata section
+	// reportBuilder.WriteString("---\n\n")
+	// reportBuilder.WriteString(fmt.Sprintf("**用户查询**: %s\n\n", s.Request.Query))
+	// if s.UserIntent != "" {
+	// 	reportBuilder.WriteString(fmt.Sprintf("**用户意图**: %s\n\n", s.UserIntent))
+	// }
+	// reportBuilder.WriteString("---\n\n")
+
+	// Combine all sections
+	for i, sectionContent := range s.ReportSections {
+		if sectionContent == "" {
+			logf(ctx, "警告: 章节 %d 内容为空，跳过\n", i+1)
+			continue
+		}
+
+		// Get section title
+		title := ""
+		if i < len(sectionTitles) {
+			title = sectionTitles[i]
+		} else {
+			title = fmt.Sprintf("章节 %d", i+1)
+		}
+
+		// Clean and normalize the section content
+		cleanedContent := cleanMarkdownContent(sectionContent)
+
+		// Add section heading and content
+		reportBuilder.WriteString(fmt.Sprintf("## %s\n\n", title))
+		reportBuilder.WriteString(cleanedContent)
+		reportBuilder.WriteString("\n\n")
 	}
 
-	// Inform LLM about available images
-	imageInfo := ""
-	if len(s.Images) > 0 {
-		imageInfo = fmt.Sprintf("\n\n注意：研究过程中收集到 %d 张相关图片。在报告中适当的位置，你可以使用 [IMAGE_X：图片标题] 占位符来标记应该插入图片的位置（X 为 1 到 %d，图片标题为你为该图片起的标题）。例如：[IMAGE_1：某某图表]。请务必确保引用的图片与周围的文字内容高度相关，如果图片与当前段落无关，请不要强行插入。", len(s.Images), len(s.Images))
-	}
+	// Get the complete markdown
+	markdownContent := reportBuilder.String()
 
-	// 构建完整的报告提示词
-	var prompt strings.Builder
-	if len(s.InsightResults) > 0 {
-		prompt.WriteString("你是一名资深报告撰写员。请根据以下研究结果和深度洞察分析，撰写一份全面、详细的最终报告。\n\n")
-		prompt.WriteString(fmt.Sprintf("## 用户查询\n%s\n\n", s.Request.Query))
-		prompt.WriteString(fmt.Sprintf("## 用户意图\n%s\n\n", s.UserIntent))
-		prompt.WriteString(fmt.Sprintf("## 实体信息\n%s\n\n", s.EntityInfo))
-		prompt.WriteString("## 研究结果\n")
-		prompt.WriteString(researchData)
-		prompt.WriteString("\n\n")
-		prompt.WriteString(insightData)
-		prompt.WriteString("\n\n## 你的任务\n")
-		prompt.WriteString("请整合以上信息，撰写一份结构完整、内容详实的专业报告。报告应该包含：\n\n")
-		prompt.WriteString("1. **执行摘要**: 简要概述研究主题和核心发现\n")
-		prompt.WriteString("2. **详细内容**: 基于研究结果展开详细分析\n")
-		prompt.WriteString("3. **深度洞察**: 整合深度洞察分析的关键观点\n")
-		prompt.WriteString("4. **结论建议**: 提供清晰的结论和实用建议\n\n")
-		prompt.WriteString("使用 Markdown 格式，包含清晰的标题、要点，并在适当的地方使用代码块。数学公式请使用 ```math 代码块包裹，或者使用 $$...$$ (块级) 和 $...$ (行内) 包裹。不要透漏撰写人信息。")
-		prompt.WriteString(imageInfo)
-		prompt.WriteString("\n\n必须使用中文撰写报告，确保报告内容详实、逻辑清晰、洞察深刻。")
-	} else {
-		prompt.WriteString("你是一名资深报告撰写员。请根据以下研究结果撰写一份全面的最终报告。使用 Markdown 格式，包含清晰的标题、要点，并在适当的地方使用代码块。数学公式请使用 ```math 代码块包裹，或者使用 $$...$$ (块级) 和 $...$ (行内) 包裹。不要透漏撰写人信息。")
-		prompt.WriteString(imageInfo)
-		prompt.WriteString("必须使用中文撰写报告：\n\n")
-		prompt.WriteString(researchData)
-		prompt.WriteString(fmt.Sprintf("\n\n原始查询是：%s", s.Request.Query))
-	}
-
-	completion, err := llms.GenerateFromSinglePrompt(ctx, llm, prompt.String())
-	if err != nil {
-		return nil, err
-	}
-
-	// Convert Markdown to HTML
-	// Clean up markdown code blocks if present
-	completion = strings.TrimPrefix(completion, "```markdown")
-	completion = strings.TrimPrefix(completion, "```")
-	completion = strings.TrimSuffix(completion, "```")
-
-	completion = imgRe.ReplaceAllStringFunc(completion, func(match string) string {
+	// Handle images if present
+	markdownContent = imgRe.ReplaceAllStringFunc(markdownContent, func(match string) string {
 		parts := imgRe.FindStringSubmatch(match)
 		if len(parts) < 3 {
 			return match
@@ -528,24 +1342,157 @@ func ReporterNode(ctx context.Context, state any) (any, error) {
 	})
 
 	// If LLM didn't use placeholders, append images at the end
-	if len(s.Images) > 0 && !strings.Contains(completion, "<img") {
-		completion += "\n\n## 相关图片\n\n"
+	if len(s.Images) > 0 && !strings.Contains(markdownContent, "<img") {
+		markdownContent += "\n\n## 相关图片\n\n"
 		for i, imgURL := range s.Images {
-			completion += fmt.Sprintf("<img src=\"%s\" alt=\"图片 %d\" style=\"max-width: 90%%; display: block; margin: 10px auto;\" />\n\n", imgURL, i+1)
+			markdownContent += fmt.Sprintf("<img src=\"%s\" alt=\"图片 %d\" style=\"max-width: 90%%; display: block; margin: 10px auto;\" />\n\n", imgURL, i+1)
 		}
 	}
 
+	// Final cleanup of the entire markdown document
+	markdownContent = cleanMarkdownDocument(markdownContent)
+
+	// Convert Markdown to HTML
 	extensions := parser.CommonExtensions | parser.AutoHeadingIDs
 	p := parser.NewWithExtensions(extensions)
-	doc := p.Parse([]byte(completion))
+	doc := p.Parse([]byte(markdownContent))
 
 	htmlFlags := html.CommonFlags | html.HrefTargetBlank
 	opts := html.RendererOptions{Flags: htmlFlags}
 	renderer := html.NewRenderer(opts)
 
 	s.FinalReport = string(markdown.Render(doc, renderer))
-	logf(ctx, "最终报告已生成（包含 %d 张图片）。\n", len(s.Images))
+
+	// Calculate total character count
+	totalChars := 0
+	for _, content := range s.ReportSections {
+		totalChars += len(content)
+	}
+
+	logf(ctx, "最终报告已编译完成（%d 个章节，共 %d 字符，包含 %d 张图片）。\n",
+		len(s.ReportSections), totalChars, len(s.Images))
+
 	return s, nil
+}
+
+// cleanMarkdownContent cleans and normalizes markdown content from LLM output
+func cleanMarkdownContent(content string) string {
+	lines := strings.Split(content, "\n")
+	var cleaned []string
+
+	// Remove leading/trailing empty lines
+	start := 0
+	for start < len(lines) && strings.TrimSpace(lines[start]) == "" {
+		start++
+	}
+	end := len(lines)
+	for end > start && strings.TrimSpace(lines[end-1]) == "" {
+		end--
+	}
+
+	if start >= end {
+		return ""
+	}
+
+	// Track if we're in a code block
+	inCodeBlock := false
+	codeBlockFence := ""
+
+	for i := start; i < end; i++ {
+		line := lines[i]
+		trimmed := strings.TrimSpace(line)
+
+		// Handle code blocks
+		if strings.HasPrefix(trimmed, "```") {
+			if !inCodeBlock {
+				// Starting a code block
+				inCodeBlock = true
+				codeBlockFence = trimmed
+				cleaned = append(cleaned, line)
+			} else if strings.HasPrefix(trimmed, codeBlockFence) {
+				// Ending a code block
+				inCodeBlock = false
+				cleaned = append(cleaned, line)
+			} else {
+				// Different fence, treat as content
+				cleaned = append(cleaned, line)
+			}
+			continue
+		}
+
+		// If inside code block, keep as-is
+		if inCodeBlock {
+			cleaned = append(cleaned, line)
+			continue
+		}
+
+		// Remove markdown code block markers if they wrap the entire content
+		if trimmed == "```markdown" || trimmed == "```" || trimmed == "```md" {
+			// Skip these standalone markers
+			continue
+		}
+
+		// Clean up the line but preserve structure
+		// Remove excessive empty lines (will be handled later)
+		cleaned = append(cleaned, line)
+	}
+
+	// Join lines and normalize spacing
+	result := strings.Join(cleaned, "\n")
+
+	// Remove multiple consecutive empty lines (keep max 2)
+	result = regexp.MustCompile(`\n{3,}`).ReplaceAllString(result, "\n\n")
+
+	// Fix common formatting issues
+	// Ensure proper spacing around headings
+	result = regexp.MustCompile(`([^\n])\n(#{1,6})`).ReplaceAllString(result, "$1\n\n$2")
+	result = regexp.MustCompile(`(#{1,6}[^\n]+)\n([^#\s])`).ReplaceAllString(result, "$1\n\n$2")
+
+	// Ensure proper spacing around lists
+	result = regexp.MustCompile(`([^\n])\n([-\*]\s)`).ReplaceAllString(result, "$1\n\n$2")
+	result = regexp.MustCompile(`([^\n])\n(\d+\.\s)`).ReplaceAllString(result, "$1\n\n$2")
+
+	// Fix bold formatting issues
+	result = regexp.MustCompile(`\*\*([^*]+)\*\*`).ReplaceAllString(result, "**$1**")
+
+	// Fix inline code issues - use double quotes to escape backticks
+	result = regexp.MustCompile("`([^`]+)`").ReplaceAllString(result, "`$1`")
+
+	return result
+}
+
+// cleanMarkdownDocument performs final cleanup on the entire markdown document
+func cleanMarkdownDocument(doc string) string {
+	// Remove document-level markdown code fences
+	doc = strings.TrimSpace(doc)
+	doc = strings.TrimPrefix(doc, "```markdown")
+	doc = strings.TrimPrefix(doc, "```md")
+	doc = strings.TrimPrefix(doc, "```")
+	doc = strings.TrimSuffix(doc, "```")
+	doc = strings.TrimSpace(doc)
+
+	// Ensure document starts with a single # (not ## or ###)
+	lines := strings.Split(doc, "\n")
+	if len(lines) > 0 {
+		firstLine := strings.TrimSpace(lines[0])
+		if strings.HasPrefix(firstLine, "#") && !strings.HasPrefix(firstLine, "# ") {
+			// Fix headings like ## or ### at the start to #
+			for i := 0; i < len(firstLine); i++ {
+				if firstLine[i] != '#' {
+					lines[0] = "# " + strings.TrimSpace(firstLine[i:])
+					break
+				}
+			}
+		}
+	}
+
+	// Normalize line endings
+	doc = strings.Join(lines, "\n")
+
+	// Remove excessive empty lines at document level
+	doc = regexp.MustCompile(`\n{4,}`).ReplaceAllString(doc, "\n\n\n")
+
+	return doc
 }
 
 // PodcastNode generates a podcast script based on the research results.
