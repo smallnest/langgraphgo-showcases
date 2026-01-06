@@ -13,6 +13,50 @@ document.addEventListener('DOMContentLoaded', () => {
     const historyModal = document.getElementById('historyModal');
     const closeHistoryBtn = document.getElementById('closeHistoryBtn');
     const historyList = document.getElementById('historyList');
+    const chatContainer = document.getElementById('chatContainer');
+    const resizer = document.getElementById('resizer');
+    const collapseBtn = document.getElementById('collapseBtn');
+
+    // Collapse functionality
+    const collapsedIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="collapse-icon"><rect width="18" height="18" x="3" y="3" rx="2"></rect><path d="M15 3v18"></path></svg>`;
+    const expandedIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="collapse-icon"><rect width="18" height="18" x="3" y="3" rx="2"></rect><path d="M9 3v18"></path></svg>`;
+
+    collapseBtn.addEventListener('click', () => {
+        chatContainer.classList.toggle('collapsed');
+        const isCollapsed = chatContainer.classList.contains('collapsed');
+        collapseBtn.title = isCollapsed ? '展开' : '收起';
+        collapseBtn.innerHTML = isCollapsed ? collapsedIcon : expandedIcon;
+    });
+
+    // Resizer functionality
+    let isResizing = false;
+
+    resizer.addEventListener('mousedown', (e) => {
+        isResizing = true;
+        resizer.classList.add('active');
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+    });
+
+    document.addEventListener('mousemove', (e) => {
+        if (!isResizing) return;
+
+        const containerRect = document.querySelector('.app-main').getBoundingClientRect();
+        const newWidth = ((e.clientX - containerRect.left) / containerRect.width) * 100;
+
+        if (newWidth >= 20 && newWidth <= 80) {
+            chatContainer.style.width = newWidth + '%';
+        }
+    });
+
+    document.addEventListener('mouseup', () => {
+        if (isResizing) {
+            isResizing = false;
+            resizer.classList.remove('active');
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+        }
+    });
 
     // History Modal
     historyBtn.addEventListener('click', () => {
