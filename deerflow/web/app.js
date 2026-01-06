@@ -9,10 +9,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const statusText = statusIndicator.querySelector('.text');
     const tabBtns = document.querySelectorAll('.tab-btn');
     const tabContents = document.querySelectorAll('.tab-content');
-    const historyBtn = document.getElementById('historyBtn');
-    const historyModal = document.getElementById('historyModal');
-    const closeHistoryBtn = document.getElementById('closeHistoryBtn');
-    const historyList = document.getElementById('historyList');
     const chatContainer = document.getElementById('chatContainer');
     const resizer = document.getElementById('resizer');
     const collapseBtn = document.getElementById('collapseBtn');
@@ -58,55 +54,79 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // History Modal
-    historyBtn.addEventListener('click', () => {
-        loadHistory();
-        historyModal.classList.add('active');
-    });
-
-    closeHistoryBtn.addEventListener('click', () => {
-        historyModal.classList.remove('active');
-    });
-
-    historyModal.addEventListener('click', (e) => {
-        if (e.target === historyModal) {
-            historyModal.classList.remove('active');
-        }
-    });
-
-    async function loadHistory() {
+    // Load history panel
+    async function loadHistoryPanel() {
+        const historyPanelContent = document.getElementById('historyPanelContent');
         try {
             const res = await fetch('/api/history');
             const history = await res.json();
 
-            historyList.innerHTML = '';
             if (!history || history.length === 0) {
-                historyList.innerHTML = '<div class="placeholder-text">历史请求为空</div>';
+                historyPanelContent.innerHTML = '<div class="placeholder-text">历史会话为空</div>';
                 return;
             }
 
+            historyPanelContent.innerHTML = '<div class="history-grid"></div>';
+            const grid = historyPanelContent.querySelector('.history-grid');
+
             history.forEach(item => {
-                const el = document.createElement('div');
-                el.className = 'history-item';
-                const date = new Date(item.timestamp).toLocaleString();
-                el.innerHTML = `
-                    <div class="history-query">${item.query}</div>
-                    <div class="history-date">${date}</div>
+                const card = document.createElement('div');
+                card.className = 'history-card';
+
+                const date = new Date(item.timestamp);
+                const dateStr = date.toLocaleDateString('zh-CN', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit'
+                });
+                const timeStr = date.toLocaleTimeString('zh-CN', {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+
+                card.innerHTML = `
+                    <div class="history-card-title">${escapeHtml(item.query)}</div>
+                    <div class="history-card-meta">
+                        <span>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                                <line x1="16" y1="2" x2="16" y2="6"></line>
+                                <line x1="8" y1="2" x2="8" y2="6"></line>
+                                <line x1="3" y1="10" x2="21" y2="10"></line>
+                            </svg>
+                            ${dateStr}
+                        </span>
+                        <span>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <polyline points="12 6 12 12 16 14"></polyline>
+                            </svg>
+                            ${timeStr}
+                        </span>
+                    </div>
                 `;
-                el.addEventListener('click', () => {
+
+                card.addEventListener('click', () => {
                     queryInput.value = item.query;
                     queryInput.style.height = 'auto';
                     queryInput.style.height = (queryInput.scrollHeight) + 'px';
                     sendBtn.disabled = false;
-                    historyModal.classList.remove('active');
+                    switchTab('activities');
                     handleSearch();
                 });
-                historyList.appendChild(el);
+
+                grid.appendChild(card);
             });
         } catch (err) {
-            console.error('Failed to load history:', err);
-            historyList.innerHTML = '<div class="placeholder-text">加载历史记录失败</div>';
+            console.error('Failed to load history panel:', err);
+            historyPanelContent.innerHTML = '<div class="placeholder-text">加载历史记录失败</div>';
         }
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
 
     // Tab switching helper
@@ -123,6 +143,9 @@ document.addEventListener('DOMContentLoaded', () => {
             reportTab.classList.add('active');
         } else if (tabId === 'podcast') {
             document.getElementById('podcastTab').classList.add('active');
+        } else if (tabId === 'history') {
+            document.getElementById('historyTab').classList.add('active');
+            loadHistoryPanel();
         } else {
             document.getElementById('activitiesContent').classList.add('active');
         }

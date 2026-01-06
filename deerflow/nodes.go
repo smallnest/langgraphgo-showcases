@@ -144,7 +144,7 @@ func QueryAgentNode(ctx context.Context, state any) (any, error) {
 	var output struct {
 		UserIntent   string `json:"user_intent"`
 		RefinedQuery string `json:"refined_query"`
-		EntityInfo   string `json:"entity_info"`
+		EntityInfo   any    `json:"entity_info"`
 		Reasoning    string `json:"reasoning"`
 	}
 
@@ -156,7 +156,20 @@ func QueryAgentNode(ctx context.Context, state any) (any, error) {
 	} else {
 		s.UserIntent = output.UserIntent
 		s.RefinedQuery = output.RefinedQuery
-		s.EntityInfo = output.EntityInfo
+		// Convert EntityInfo to string
+		switch v := output.EntityInfo.(type) {
+		case string:
+			s.EntityInfo = v
+		case map[string]any:
+			// If it's an object, convert to JSON string
+			if jsonBytes, err := json.Marshal(v); err == nil {
+				s.EntityInfo = string(jsonBytes)
+			} else {
+				s.EntityInfo = fmt.Sprintf("%v", v)
+			}
+		default:
+			s.EntityInfo = fmt.Sprintf("%v", v)
+		}
 	}
 
 	logf(ctx, "识别意图: %s\n", s.UserIntent)

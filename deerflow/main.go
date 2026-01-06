@@ -107,7 +107,7 @@ func handleRun(w http.ResponseWriter, r *http.Request) {
 
 	// Check if we have a saved run for this query
 	sanitizedQuery := sanitizeFilename(query)
-	dataDir := filepath.Join("showcases", "deerflow", "data", sanitizedQuery)
+	dataDir := filepath.Join("data", sanitizedQuery)
 	if _, err := os.Stat(dataDir); err == nil {
 		// Data exists, replay it
 		replayRun(w, flusher, dataDir)
@@ -280,7 +280,7 @@ func replayRun(w http.ResponseWriter, flusher http.Flusher, dir string) {
 }
 
 func handleHistory(w http.ResponseWriter, r *http.Request) {
-	dataRoot := filepath.Join("showcases", "deerflow", "data")
+	dataRoot := filepath.Join("data")
 	entries, err := os.ReadDir(dataRoot)
 	if err != nil {
 		http.Error(w, "Failed to read history", http.StatusInternalServerError)
