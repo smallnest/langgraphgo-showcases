@@ -22,6 +22,14 @@ type State struct {
 	PodcastScript   string   `json:"podcast_script"`
 	GeneratePodcast bool     `json:"generate_podcast"`
 	Step            int      `json:"step"`
+
+	// Intent recognition
+	UserIntent      string   `json:"user_intent"`      // 识别的用户意图
+	RefinedQuery    string   `json:"refined_query"`    // 优化后的查询
+	EntityInfo      string   `json:"entity_info"`      // 实体信息
+
+	// Insight analysis
+	InsightResults  []string `json:"insight_results"`  // 洞察分析结果
 }
 
 // NewGraph creates and configures the research agent graph.
@@ -29,20 +37,28 @@ func NewGraph() (*graph.StateRunnable[*State], error) {
 	workflow := graph.NewStateGraph[*State]()
 
 	// Add nodes with typed functions
+	workflow.AddNode("query_agent", "Query analysis and intent recognition node", QueryAgentNodeTyped)
 	workflow.AddNode("planner", "Research planning node", PlannerNodeTyped)
 	workflow.AddNode("researcher", "Research execution node", ResearcherNodeTyped)
+	workflow.AddNode("insight_agent", "Deep insight analysis node", InsightAgentNodeTyped)
 	workflow.AddNode("reporter", "Report generation node", ReporterNodeTyped)
 	workflow.AddNode("podcast", "Podcast script generation node", PodcastNodeTyped)
 
 	// Add edges
-	// Start -> Planner
-	workflow.SetEntryPoint("planner")
+	// Start -> QueryAgent
+	workflow.SetEntryPoint("query_agent")
+
+	// QueryAgent -> Planner
+	workflow.AddEdge("query_agent", "planner")
 
 	// Planner -> Researcher
 	workflow.AddEdge("planner", "researcher")
 
-	// Researcher -> Reporter
-	workflow.AddEdge("researcher", "reporter")
+	// Researcher -> InsightAgent
+	workflow.AddEdge("researcher", "insight_agent")
+
+	// InsightAgent -> Reporter
+	workflow.AddEdge("insight_agent", "reporter")
 
 	// Reporter -> Podcast (Conditional) or END
 	workflow.AddConditionalEdge("reporter", func(ctx context.Context, state *State) string {
