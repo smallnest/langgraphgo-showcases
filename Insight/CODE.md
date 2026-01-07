@@ -1,10 +1,10 @@
-# DeerFlow 代码实现解读
+# Insight 代码实现解读
 
-本文档详细解读了 DeerFlow 深度研究智能体的代码实现。该项目使用 Go 语言编写，基于 `langgraphgo` 框架构建多智能体工作流。
+本文档详细解读了 Insight 深度研究智能体的代码实现。该项目使用 Go 语言编写，基于 `langgraphgo` 框架构建多智能体工作流。
 
 ## 1. 核心架构与状态管理
 
-DeerFlow 的核心是一个基于状态图（State Graph）的工作流，定义在 `graph.go` 中。
+Insight 的核心是一个基于状态图（State Graph）的工作流，定义在 `graph.go` 中。
 
 ### 1.1 状态定义 (`State`)
 
@@ -102,14 +102,14 @@ workflow.AddConditionalEdge("reporter", func(ctx context.Context, state any) str
 
 ### 3.1 命令行模式 (CLI)
 
-如果运行 `./deerflow "查询内容"`，程序会：
+如果运行 `./Insight "查询内容"`，程序会：
 1.  创建一个初始状态。
 2.  直接调用 `graph.Invoke`。
 3.  在终端打印最终报告。
 
 ### 3.2 Web 服务器模式
 
-如果直接运行 `./deerflow`，程序启动 HTTP 服务器（默认端口 8085）。
+如果直接运行 `./Insight`，程序启动 HTTP 服务器（默认端口 8085）。
 
 *   **静态资源**: 通过 `embed` 包将 `web/` 目录下的 HTML/JS/CSS 文件打包在二进制中，便于分发。
 *   **API `/api/run`**: 核心接口，使用 **SSE (Server-Sent Events)** 技术。
@@ -127,4 +127,4 @@ workflow.AddConditionalEdge("reporter", func(ctx context.Context, state any) str
 *   **`getLLM`**: 封装了 LLM 的初始化逻辑，目前使用 `langchaingo/llms/openai`，支持通过环境变量配置 API Key 和 Base URL（如使用 DeepSeek 等兼容接口）。
 
 ---
-*本文档基于当前代码库版本生成，旨在帮助开发者快速理解 DeerFlow 的实现细节。*
+*本文档基于当前代码库版本生成，旨在帮助开发者快速理解 Insight 的实现细节。*

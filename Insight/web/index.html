@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DeerFlow - Deep Research Agent</title>
+    <title>Insight - Deep Research Agent</title>
     <link rel="preconnect" href="https://fonts.googleapis.cn">
     <link href="https://fonts.googleapis.cn/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
@@ -34,17 +34,25 @@
 <body>
     <div class="app-container">
         <header class="app-header">
-            <div class="logo">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                        stroke-linejoin="round" />
-                    <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                        stroke-linejoin="round" />
-                    <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                        stroke-linejoin="round" />
-                </svg>
-                <span>DeerFlow</span>
-                <span class="powered-by">powered by langgraphgo</span>
+            <div class="header-left">
+                <div class="logo">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                            stroke-linejoin="round" />
+                        <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                            stroke-linejoin="round" />
+                        <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                            stroke-linejoin="round" />
+                    </svg>
+                    <span>Insight</span>
+                    <span class="powered-by">powered by langgraphgo</span>
+                </div>
+                <button class="icon-btn" id="newChatBtn" title="新会话">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 5v14M5 12h14"></path>
+                    </svg>
+                    <span>新会话</span>
+                </button>
             </div>
             <div class="actions">
                 <a href="https://github.com/smallnest/langgraphgo" target="_blank" class="icon-btn"
@@ -85,7 +93,7 @@
                             </svg>
                         </div>
                         <div class="content">
-                            <p>你好！我是用 Go 编写的 DeerFlow 克隆版，你的深度研究助手。今天你想研究什么？
+                            <p>你好！我是用 Go 编写的 Insight 研究助手，你的深度研究助手。今天你想研究什么？
                             </p>
                         </div>
                     </div>
@@ -115,9 +123,21 @@
                         <button class="tab-btn" data-tab="history">历史</button>
                         <button class="tab-btn" data-tab="podcast" id="podcastTabBtn" style="display: none;">播客</button>
                     </div>
-                    <div class="status-indicator" id="statusIndicator">
-                        <span class="dot"></span>
-                        <span class="text">空闲</span>
+                    <div class="header-right">
+                        <button class="share-btn" id="shareBtn" title="分享报告" style="display: none;">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="18" cy="5" r="3"></circle>
+                                <circle cx="6" cy="12" r="3"></circle>
+                                <circle cx="18" cy="19" r="3"></circle>
+                                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                                <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                            </svg>
+                            <span>分享</span>
+                        </button>
+                        <div class="status-indicator" id="statusIndicator">
+                            <span class="dot"></span>
+                            <span class="text">空闲</span>
+                        </div>
                     </div>
                 </div>
                 <div class="panel-content">
@@ -164,6 +184,26 @@
             }
         });
 
+        // 转换 Gantt 图表中的季度格式为日期
+        function convertGanttQuarterFormat(code) {
+            // 检查是否是 Gantt 图表
+            if (!code.trim().toLowerCase().startsWith('gantt')) {
+                return code;
+            }
+
+            // 转换 YYYY-Q 格式为 YYYY-MM-DD 格式
+            // Q1 -> 01-01, Q2 -> 04-01, Q3 -> 07-01, Q4 -> 10-01
+            return code.replace(/(\d{4})-Q(\d)/gi, (match, year, quarter) => {
+                const quarterStartMonth = {
+                    '1': '-01-01',
+                    '2': '-04-01',
+                    '3': '-07-01',
+                    '4': '-10-01'
+                };
+                return year + quarterStartMonth[quarter];
+            });
+        }
+
         // 全局函数，用于处理 Mermaid 代码块
         window.processMermaidBlocks = async function () {
             console.log('开始处理 Mermaid 代码块...');
@@ -184,8 +224,11 @@
                     continue;
                 }
 
-                const mermaidCode = block.textContent || block.innerText;
+                let mermaidCode = block.textContent || block.innerText;
                 console.log(`处理第 ${i + 1} 个代码块:`, mermaidCode);
+
+                // 转换 Gantt 图表的季度格式
+                mermaidCode = convertGanttQuarterFormat(mermaidCode);
 
                 // 创建图表容器
                 const diagramId = `mermaid-diagram-${Date.now()}-${i}`;
@@ -222,7 +265,7 @@
                             ${error.message}<br>
                             <details>
                                 <summary>原始代码</summary>
-                                <pre>${mermaidCode}</pre>
+                                <pre>${block.textContent || block.innerText}</pre>
                             </details>
                         </div>
                     `;

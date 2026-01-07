@@ -4,12 +4,12 @@
       "Bash(xargs:*)",
       "Bash(go build:*)",
       "Bash(cat:*)",
-      "Bash(./deerflow:*)",
+      "Bash(./Insight:*)",
       "Bash(go run:*)",
       "Bash(ls:*)",
       "Bash(go test:*)",
       "Bash(go mod tidy:*)",
-      "Bash(timeout 10 ./deerflow:*)"
+      "Bash(timeout 10 ./Insight:*)"
     ],
     "deny": [],
     "ask": []

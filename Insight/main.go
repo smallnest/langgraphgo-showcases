@@ -13,11 +13,27 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"sync"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 //go:embed web
 var webFS embed.FS
+
+// Shared report storage
+type SharedReport struct {
+	ID        string    `json:"id"`
+	HTML      string    `json:"html"`
+	Query     string    `json:"query"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+var (
+	reportsMap = make(map[string]*SharedReport)
+	reportsMu  sync.RWMutex
+)
 
 type RunMetadata struct {
 	Query     string    `json:"query"`
@@ -46,7 +62,7 @@ func main() {
 }
 
 func runCLI(query string) {
-	fmt.Printf("正在启动 Deer-Flow 研究代理，查询内容：%s\n", query)
+	fmt.Printf("正在启动 Insight 研究代理，查询内容：%s\n", query)
 
 	graph, err := NewGraph()
 	if err != nil {
@@ -78,8 +94,10 @@ func runServer() {
 
 	http.HandleFunc("/api/run", handleRun)
 	http.HandleFunc("/api/history", handleHistory)
+	http.HandleFunc("/api/share", handleShare)
+	http.HandleFunc("/reports/", handleReportView)
 
-	fmt.Println("🚀 DeerFlow Web Server running at http://localhost:8085")
+	fmt.Println("🚀 Insight Web Server running at http://localhost:8085")
 	server := &http.Server{
 		Addr:              ":8085",
 		ReadHeaderTimeout: 3 * time.Second,
@@ -331,4 +349,218 @@ func sendSSE(w http.ResponseWriter, flusher http.Flusher, eventType string, data
 	jsonPayload, _ := json.Marshal(payload)
 	fmt.Fprintf(w, "data: %s\n\n", jsonPayload)
 	flusher.Flush()
+}
+
+func handleShare(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req struct {
+		HTML  string `json:"html"`
+		Query string `json:"query"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	// Generate unique ID for this report
+	reportID := uuid.New().String()
+
+	report := &SharedReport{
+		ID:        reportID,
+		HTML:      req.HTML,
+		Query:     req.Query,
+		CreatedAt: time.Now(),
+	}
+
+	// Store the report
+	reportsMu.Lock()
+	reportsMap[reportID] = report
+	reportsMu.Unlock()
+
+	// Return the share URL
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{
+		"id":  reportID,
+		"url": fmt.Sprintf("http://localhost:8085/reports/%s", reportID),
+	})
+}
+
+func handleReportView(w http.ResponseWriter, r *http.Request) {
+	// Extract report ID from URL
+	// URL format: /reports/{id}
+	id := strings.TrimPrefix(r.URL.Path, "/reports/")
+	if id == "" {
+		http.Error(w, "Report ID is required", http.StatusBadRequest)
+		return
+	}
+
+	// Retrieve the report
+	reportsMu.RLock()
+	report, exists := reportsMap[id]
+	reportsMu.RUnlock()
+
+	if !exists {
+		http.Error(w, "Report not found", http.StatusNotFound)
+		return
+	}
+
+	// Render the shared report page
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	fmt.Fprintf(w, `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>%s - Insight 研究报告</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
+            background-color: #f7f5f0;
+            color: #333;
+            line-height: 1.6;
+        }
+        .header {
+            background: white;
+            padding: 20px 40px;
+            border-bottom: 1px solid #e6e4dd;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header h1 {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+        }
+        .header .brand {
+            font-size: 14px;
+            color: #666;
+        }
+        .content {
+            max-width: 850px;
+            margin: 40px auto;
+            padding: 60px 60px;
+            background: white;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
+            border-radius: 2px;
+            min-height: calc(100vh - 160px);
+        }
+        .content h1 {
+            font-size: 2.8em;
+            font-weight: 800;
+            margin-bottom: 40px;
+            padding-bottom: 40px;
+            border-bottom: 3px solid #333;
+            line-height: 1.5;
+        }
+        .content h2 {
+            font-size: 2.0em;
+            font-weight: 700;
+            margin-top: 30px;
+            margin-bottom: 20px;
+            color: #333;
+        }
+        .content h3 {
+            font-size: 1.5em;
+            font-weight: 600;
+            margin-top: 20px;
+            margin-bottom: 15px;
+        }
+        .content p {
+            margin-bottom: 16px;
+            color: #333;
+            line-height: 1.7;
+        }
+        .content ul, .content ol {
+            margin-bottom: 24px;
+            padding-left: 28px;
+        }
+        .content li {
+            margin-bottom: 8px;
+        }
+        .content code {
+            background-color: #f6f8fa;
+            padding: 0.2em 0.4em;
+            border-radius: 3px;
+            font-family: 'Menlo', 'Monaco', monospace;
+            font-size: 0.9em;
+        }
+        .content pre {
+            background-color: #f6f8fa;
+            padding: 16px;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin-bottom: 24px;
+        }
+        .content pre code {
+            background: none;
+            padding: 0;
+        }
+        .content blockquote {
+            border-left: 4px solid #d97757;
+            padding: 16px 24px;
+            margin: 24px 0;
+            background-color: #f8f9fa;
+            color: #666;
+        }
+        .content strong {
+            font-weight: 600;
+        }
+        .mermaid-diagram {
+            text-align: center;
+            margin: 30px 0;
+            padding: 20px;
+            background: #fafafa;
+            border-radius: 8px;
+        }
+        .katex {
+            font-size: 1.1em;
+        }
+    </style>
+    <script src="https://s4.zstatic.net/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+    <script src="https://s4.zstatic.net/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+    <script src="https://s4.zstatic.net/ajax/libs/mermaid/11.12.0/mermaid.min.js"></script>
+</head>
+<body>
+    <div class="header">
+        <h1>%s</h1>
+        <div class="brand">由 <a href="https://insight.rpcx.io" target="_blank" style="color: #666; text-decoration: none; font-weight: 500;">Insight</a> AI 研究助手生成</div>
+    </div>
+    <div class="content">
+        %s
+    </div>
+    <script>
+        // Initialize Mermaid
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'default',
+            securityLevel: 'loose'
+        });
+
+        // Render math
+        renderMathInElement(document.body, {
+            delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false}
+            ]
+        });
+
+        // Highlight code
+        document.querySelectorAll('pre code').forEach((block) => {
+            hljs.highlightElement(block);
+        });
+    </script>
+</body>
+</html>`, report.Query, report.Query, report.HTML)
 }

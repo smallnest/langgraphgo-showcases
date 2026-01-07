@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/smallnest/langgraphgo-showcases/deerflow/tool"
+	"github.com/smallnest/langgraphgo-showcases/Insight/tool"
 )
 
 // SearchHelper manages search operations for the researcher node.

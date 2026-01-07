@@ -1,12 +1,12 @@
-# DeerFlow - Deep Research Agent
+# Insight - Deep Research Agent
 
-A Go implementation of the [ByteDance DeerFlow](https://github.com/bytedance/deer-flow) deep research agent, built using [langgraphgo](https://github.com/smallnest/langgraphgo) and [langchaingo](https://github.com/tmc/langchaingo).
+A Go implementation of the [ByteDance Insight](https://github.com/bytedance/deer-flow) deep research agent, built using [langgraphgo](https://github.com/smallnest/langgraphgo) and [langchaingo](https://github.com/tmc/langchaingo).
 
-DeerFlow is an intelligent multi-agent research system that autonomously conducts deep research on any topic, generates comprehensive reports, and optionally creates podcast scripts for engaging content delivery.
+Insight is an intelligent multi-agent research system that autonomously conducts deep research on any topic, generates comprehensive reports, and optionally creates podcast scripts for engaging content delivery.
 
 ## Overview
 
-DeerFlow orchestrates multiple AI agents to perform structured research:
+Insight orchestrates multiple AI agents to perform structured research:
 
 ```
 User Query → Planner → Researcher → Reporter → (Optional) Podcast → Final Output
@@ -41,7 +41,7 @@ The system breaks down complex research tasks, gathers information systematicall
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                       DeerFlow                              │
+│                       Insight                              │
 ├─────────────────────────────────────────────────────────────┤
 │                                                             │
 │  ┌──────────┐    ┌──────────┐    ┌──────────┐    ┌──────┐│
@@ -87,8 +87,8 @@ The system breaks down complex research tasks, gathers information systematicall
 ## Installation
 
 ```bash
-# Navigate to the deerflow directory
-cd showcases/deerflow
+# Navigate to the Insight directory
+cd showcases/Insight
 
 # Set up environment variables
 export OPENAI_API_KEY="your-api-key-here"
@@ -97,7 +97,7 @@ export OPENAI_API_KEY="your-api-key-here"
 export OPENAI_API_BASE="https://api.deepseek.com/v1"
 
 # Build the application
-go build -o deerflow .
+go build -o Insight .
 ```
 
 ## Usage
@@ -107,7 +107,7 @@ go build -o deerflow .
 Start the web server:
 
 ```bash
-./deerflow
+./Insight
 ```
 
 Then open your browser and navigate to:
@@ -128,35 +128,35 @@ For quick, one-off queries:
 
 ```bash
 # Basic usage
-./deerflow "Your research question here"
+./Insight "Your research question here"
 
 # Example queries
-./deerflow "What are the latest advances in quantum computing?"
-./deerflow "Explain the impact of AI on healthcare"
-./deerflow "What is the current state of renewable energy?"
+./Insight "What are the latest advances in quantum computing?"
+./Insight "Explain the impact of AI on healthcare"
+./Insight "What is the current state of renewable energy?"
 ```
 
 ### Example Queries
 
 **Technology Research:**
 ```bash
-./deerflow "What are the breakthrough developments in AI in 2024?"
+./Insight "What are the breakthrough developments in AI in 2024?"
 ```
 
 **Scientific Research:**
 ```bash
-./deerflow "What are the recent discoveries about Mars exploration?"
+./Insight "What are the recent discoveries about Mars exploration?"
 ```
 
 **Business Research:**
 ```bash
-./deerflow "What are the emerging trends in e-commerce?"
+./Insight "What are the emerging trends in e-commerce?"
 ```
 
 **With Podcast Generation:**
 ```bash
-./deerflow "Create a podcast about blockchain technology"
-./deerflow "生成关于人工智能的播客脚本"
+./Insight "Create a podcast about blockchain technology"
+./Insight "生成关于人工智能的播客脚本"
 ```
 
 ## Configuration
@@ -182,7 +182,7 @@ server := &http.Server{
 ## Project Structure
 
 ```
-deerflow/
+Insight/
 ├── main.go              # Entry point, HTTP server, CLI handler
 ├── graph.go             # Graph structure and state definitions
 ├── nodes.go             # Agent implementations (Planner, Researcher, Reporter, Podcast)
@@ -275,7 +275,7 @@ The web interface provides live updates during research:
 
 ### Caching System
 
-DeerFlow intelligently caches research results:
+Insight intelligently caches research results:
 - Each unique query is saved in `data/[sanitized-query]/`
 - Subsequent requests for the same query use cached data
 - Fast replay with simulated progress for better UX
@@ -360,11 +360,11 @@ For production, use the included nginx.conf:
 
 ```bash
 # Copy nginx config
-sudo cp nginx.conf /etc/nginx/sites-available/deerflow
-sudo ln -s /etc/nginx/sites-available/deerflow /etc/nginx/sites-enabled/
+sudo cp nginx.conf /etc/nginx/sites-available/Insight
+sudo ln -s /etc/nginx/sites-available/Insight /etc/nginx/sites-enabled/
 
-# Start DeerFlow
-./deerflow &
+# Start Insight
+./Insight &
 
 # Restart nginx
 sudo systemctl restart nginx
@@ -442,9 +442,9 @@ Planned features:
 - [ ] Source citations with links
 - [ ] Export to various formats (Markdown, Word, etc.)
 
-## Comparison with ByteDance DeerFlow
+## Comparison with ByteDance Insight
 
-| Feature | ByteDance DeerFlow (Python) | This Implementation (Go) |
+| Feature | ByteDance Insight (Python) | This Implementation (Go) |
 |---------|----------------------------|-------------------------|
 | Multi-agent architecture | ✅ | ✅ |
 | Research planning | ✅ | ✅ |
@@ -464,7 +464,7 @@ MIT License - Same as the parent langgraphgo project
 
 ## References
 
-- [ByteDance DeerFlow](https://github.com/bytedance/deer-flow) - Original Python implementation
+- [ByteDance Insight](https://github.com/bytedance/deer-flow) - Original Python implementation
 - [LangGraph Go](https://github.com/smallnest/langgraphgo) - Graph-based agent framework
 - [LangChain Go](https://github.com/tmc/langchaingo) - LLM integration library
 

@@ -1,12 +1,12 @@
-# DeerFlow - 深度研究智能体
+# Insight - 深度研究智能体
 
-[ByteDance DeerFlow](https://github.com/bytedance/deer-flow) 深度研究智能体的 Go 实现，使用 [langgraphgo](https://github.com/smallnest/langgraphgo) 和 [langchaingo](https://github.com/tmc/langchaingo) 构建。
+[ByteDance Insight](https://github.com/bytedance/deer-flow) 深度研究智能体的 Go 实现，使用 [langgraphgo](https://github.com/smallnest/langgraphgo) 和 [langchaingo](https://github.com/tmc/langchaingo) 构建。
 
-DeerFlow 是一个智能的多智能体研究系统，可以自主对任何主题进行深度研究，生成全面的报告，并可选择性地创建播客脚本以实现引人入胜的内容传递。
+Insight 是一个智能的多智能体研究系统，可以自主对任何主题进行深度研究，生成全面的报告，并可选择性地创建播客脚本以实现引人入胜的内容传递。
 
 ## 概述
 
-DeerFlow 编排多个 AI 智能体执行结构化研究：
+Insight 编排多个 AI 智能体执行结构化研究：
 
 ```
 用户查询 → 规划器 → 研究员 → 报告者 → （可选）播客 → 最终输出
@@ -41,7 +41,7 @@ DeerFlow 编排多个 AI 智能体执行结构化研究：
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                       DeerFlow                              │
+│                       Insight                              │
 ├─────────────────────────────────────────────────────────────┤
 │                                                             │
 │  ┌──────────┐    ┌──────────┐    ┌──────────┐    ┌──────┐│
@@ -87,8 +87,8 @@ DeerFlow 编排多个 AI 智能体执行结构化研究：
 ## 安装
 
 ```bash
-# 导航到 deerflow 目录
-cd showcases/deerflow
+# 导航到 Insight 目录
+cd showcases/Insight
 
 # 设置环境变量
 export OPENAI_API_KEY="your-api-key-here"
@@ -97,7 +97,7 @@ export OPENAI_API_KEY="your-api-key-here"
 export OPENAI_API_BASE="https://api.deepseek.com/v1"
 
 # 构建应用程序
-go build -o deerflow .
+go build -o Insight .
 ```
 
 ## 使用方法
@@ -107,7 +107,7 @@ go build -o deerflow .
 启动 Web 服务器：
 
 ```bash
-./deerflow
+./Insight
 ```
 
 然后打开浏览器并导航到：
@@ -128,35 +128,35 @@ http://localhost:8085
 
 ```bash
 # 基本用法
-./deerflow "您的研究问题"
+./Insight "您的研究问题"
 
 # 示例查询
-./deerflow "量子计算的最新进展是什么？"
-./deerflow "解释 AI 对医疗保健的影响"
-./deerflow "可再生能源的当前状态如何？"
+./Insight "量子计算的最新进展是什么？"
+./Insight "解释 AI 对医疗保健的影响"
+./Insight "可再生能源的当前状态如何？"
 ```
 
 ### 示例查询
 
 **技术研究**：
 ```bash
-./deerflow "2024 年 AI 的突破性发展是什么？"
+./Insight "2024 年 AI 的突破性发展是什么？"
 ```
 
 **科学研究**：
 ```bash
-./deerflow "火星探索的最新发现是什么？"
+./Insight "火星探索的最新发现是什么？"
 ```
 
 **商业研究**：
 ```bash
-./deerflow "电子商务的新兴趋势是什么？"
+./Insight "电子商务的新兴趋势是什么？"
 ```
 
 **生成播客**：
 ```bash
-./deerflow "创建关于区块链技术的播客"
-./deerflow "生成关于人工智能的播客脚本"
+./Insight "创建关于区块链技术的播客"
+./Insight "生成关于人工智能的播客脚本"
 ```
 
 ## 配置
@@ -182,7 +182,7 @@ server := &http.Server{
 ## 项目结构
 
 ```
-deerflow/
+Insight/
 ├── main.go              # 入口点、HTTP 服务器、CLI 处理器
 ├── graph.go             # 图结构和状态定义
 ├── nodes.go             # 智能体实现（规划器、研究员、报告者、播客）
@@ -279,7 +279,7 @@ Web 界面在研究期间提供实时更新：
 
 ### 缓存系统
 
-DeerFlow 智能地缓存研究结果：
+Insight 智能地缓存研究结果：
 - 每个唯一查询保存在 `data/[sanitized-query]/` 中
 - 对相同查询的后续请求使用缓存的数据
 - 通过模拟进度快速重播以获得更好的用户体验
@@ -364,11 +364,11 @@ workflow.AddEdge("previous_node", "custom")
 
 ```bash
 # 复制 nginx 配置
-sudo cp nginx.conf /etc/nginx/sites-available/deerflow
-sudo ln -s /etc/nginx/sites-available/deerflow /etc/nginx/sites-enabled/
+sudo cp nginx.conf /etc/nginx/sites-available/Insight
+sudo ln -s /etc/nginx/sites-available/Insight /etc/nginx/sites-enabled/
 
-# 启动 DeerFlow
-./deerflow &
+# 启动 Insight
+./Insight &
 
 # 重启 nginx
 sudo systemctl restart nginx
@@ -446,9 +446,9 @@ export OPENAI_API_KEY="sk-..."
 - [ ] 带链接的来源引用
 - [ ] 导出为各种格式（Markdown、Word 等）
 
-## 与 ByteDance DeerFlow 的比较
+## 与 ByteDance Insight 的比较
 
-| 功能 | ByteDance DeerFlow (Python) | 本实现 (Go) |
+| 功能 | ByteDance Insight (Python) | 本实现 (Go) |
 |------|----------------------------|-------------|
 | 多智能体架构 | ✅ | ✅ |
 | 研究规划 | ✅ | ✅ |
@@ -468,7 +468,7 @@ MIT License - 与父项目 langgraphgo 相同
 
 ## 参考资料
 
-- [ByteDance DeerFlow](https://github.com/bytedance/deer-flow) - 原始 Python 实现
+- [ByteDance Insight](https://github.com/bytedance/deer-flow) - 原始 Python 实现
 - [LangGraph Go](https://github.com/smallnest/langgraphgo) - 基于图的智能体框架
 - [LangChain Go](https://github.com/tmc/langchaingo) - LLM 集成库
 

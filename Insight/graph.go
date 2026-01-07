@@ -87,7 +87,7 @@ func NewGraph() (*graph.StateRunnable[*State], error) {
 			// All sections done, go to reporter
 			return "reporter"
 		}
-		// Need revision
+		// Need revision (even if quality is good, format may need improvement)
 		return "reviser"
 	})
 

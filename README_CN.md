@@ -21,7 +21,7 @@
   - [Health Insights Agent - 医疗报告分析器](#health-insights-agent)
   - [PeopleHub - 人物研究智能体](#peoplehub)
   - [DeepAgents - 文件系统感知智能体](#deepagents)
-  - [DeerFlow - 深度研究智能体](#deerflow)
+  - [Insight - 深度研究智能体](#insight)
   - [LangManus - 多智能体自动化框架](#langmanus)
   - [Profile - 数字足迹分析器](#profile)
   - [AI PDF Chatbot - 文档问答系统](#ai-pdf-chatbot)
@@ -111,7 +111,7 @@
 
 ---
 
-### DeerFlow
+### Insight
 
 **带 Web 界面的深度研究智能体**
 
@@ -122,7 +122,7 @@
 - 研究历史和结果缓存
 - 可选的播客脚本生成
 
-[📂 查看 DeerFlow →](./deerflow)
+[📂 查看 Insight →](./Insight)
 
 **核心技术**：SSE 流式传输、Web UI、播客生成、缓存
 
@@ -249,7 +249,7 @@ langgraphgo-showcases/
 ├── health_insights_agent/  # 医疗报告分析器
 ├── pepolehub/             # 人物研究智能体
 ├── deepagents/            # 文件系统感知智能体
-├── deerflow/              # 带 Web UI 的深度研究
+├── Insight/               # 带 Web UI 的深度研究
 ├── langmanus/             # 多智能体框架
 ├── profile/               # 数字足迹分析器
 ├── ai-pdf-chatbot/        # PDF 问答系统
@@ -305,7 +305,7 @@ langgraphgo-showcases/
 
 **高级**：多智能体系统
 6. BettaFish - 反思循环
-7. DeerFlow - 全栈带 UI
+7. Insight - 全栈带 UI
 8. LangManus - 复杂编排
 
 ## 贡献

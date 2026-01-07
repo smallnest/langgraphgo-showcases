@@ -21,7 +21,7 @@ This repository contains 9 comprehensive AI agent implementations showcasing dif
   - [Health Insights Agent - Medical Report Analyzer](#health-insights-agent)
   - [PeopleHub - Person Research Agent](#peoplehub)
   - [DeepAgents - Filesystem-Aware AI Agent](#deepagents)
-  - [DeerFlow - Deep Research Agent](#deerflow)
+  - [Insight - Deep Research Agent](#insight)
   - [LangManus - Multi-Agent Automation Framework](#langmanus)
   - [Profile - Digital Footprint Analyzer](#profile)
   - [AI PDF Chatbot - Document Q&A System](#ai-pdf-chatbot)
@@ -111,7 +111,7 @@ A powerful agent framework with filesystem access:
 
 ---
 
-### DeerFlow
+### Insight
 
 **Deep Research Agent with Web Interface**
 
@@ -122,7 +122,7 @@ Go implementation of [ByteDance DeerFlow](https://github.com/bytedance/deer-flow
 - Research history and result caching
 - Optional podcast script generation
 
-[📂 View DeerFlow →](./deerflow)
+[📂 View Insight →](./Insight)
 
 **Key Technologies**: SSE streaming, Web UI, Podcast generation, Caching
 
@@ -249,7 +249,7 @@ langgraphgo-showcases/
 ├── health_insights_agent/  # Medical report analyzer
 ├── pepolehub/             # Person research agent
 ├── deepagents/            # Filesystem-aware agent
-├── deerflow/              # Deep research with web UI
+├── Insight/               # Deep research with web UI
 ├── langmanus/             # Multi-agent framework
 ├── profile/               # Digital footprint analyzer
 ├── ai-pdf-chatbot/        # PDF Q&A system
@@ -305,7 +305,7 @@ These showcases demonstrate solutions for:
 
 **Advanced**: Multi-agent systems
 6. BettaFish - Reflection loops
-7. DeerFlow - Full-stack with UI
+7. Insight - Full-stack with UI
 8. LangManus - Complex orchestration
 
 ## Contributing

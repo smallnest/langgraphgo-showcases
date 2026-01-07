@@ -29,7 +29,7 @@ SHOWCASES = BettaFish \
 			health_insights_agent \
 			pepolehub \
 			deepagents \
-			deerflow \
+			Insight \
 			langmanus \
 			profile \
 			ai-pdf-chatbot/backend
@@ -117,9 +117,9 @@ run-deepagents: ## Run DeepAgents showcase
 	@echo "Running DeepAgents..."
 	@cd deepagents && $(GOCMD) run .
 
-run-deerflow: ## Run DeerFlow showcase
-	@echo "Running DeerFlow..."
-	@cd deerflow && $(GOCMD) run .
+run-Insight: ## Run Insight showcase
+	@echo "Running Insight..."
+	@cd Insight && $(GOCMD) run .
 
 run-langmanus: ## Run LangManus showcase
 	@echo "Running LangManus..."

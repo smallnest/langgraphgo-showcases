@@ -77,6 +77,23 @@ body {
     top: 3px;
 }
 
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.header-left .icon-btn {
+    padding: 8px 12px;
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+}
+
+.header-left .icon-btn span {
+    font-size: 14px;
+    font-weight: 500;
+}
+
 .icon-btn {
     background: none;
     border: none;
@@ -89,6 +106,29 @@ body {
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    gap: 4px;
+}
+
+#newChatBtn {
+    padding: 8px 12px;
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+}
+
+#newChatBtn:hover {
+    background-color: var(--accent-color);
+    color: white;
+    border-color: var(--accent-color);
+}
+
+#newChatBtn:hover svg,
+#newChatBtn:hover span {
+    color: white;
+}
+
+#newChatBtn span {
+    font-size: 14px;
+    font-weight: 500;
 }
 
 .icon-btn:hover {
@@ -114,7 +154,7 @@ body {
 }
 
 .chat-container.collapsed {
-    width: 50px;
+    width: 50px !important;
 }
 
 .chat-container.collapsed .messages,
@@ -188,7 +228,7 @@ body {
 .collapse-btn {
     position: absolute;
     top: 8px;
-    right: 8px;
+    right: 20px;
     width: 32px;
     height: 32px;
     background-color: var(--card-bg);
@@ -316,6 +356,42 @@ textarea::-webkit-scrollbar {
     display: flex;
     align-items: center;
     justify-content: space-between;
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.share-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    color: var(--text-secondary);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.share-btn:hover {
+    background-color: var(--accent-color);
+    color: white;
+    border-color: var(--accent-color);
+}
+
+.share-btn:hover svg,
+.share-btn:hover span {
+    color: white;
+}
+
+.share-btn span {
+    font-size: 14px;
 }
 
 .tabs {

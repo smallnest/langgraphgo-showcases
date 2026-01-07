@@ -13,15 +13,39 @@ document.addEventListener('DOMContentLoaded', () => {
     const resizer = document.getElementById('resizer');
     const collapseBtn = document.getElementById('collapseBtn');
 
+    // Track which node types have been shown (only show each node type once)
+    const shownNodes = new Set();
+
+    // Node types to exclude from left panel (these appear in loops for each section)
+    const excludedNodes = ['内容写作节点', '反思节点', '补充节点'];
+
     // Collapse functionality
     const collapsedIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="collapse-icon"><rect width="18" height="18" x="3" y="3" rx="2"></rect><path d="M15 3v18"></path></svg>`;
     const expandedIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="collapse-icon"><rect width="18" height="18" x="3" y="3" rx="2"></rect><path d="M9 3v18"></path></svg>`;
 
+    // Store the width before collapsing
+    let savedWidth = '40%';
+
     collapseBtn.addEventListener('click', () => {
+        const isCurrentlyCollapsed = chatContainer.classList.contains('collapsed');
+
+        if (!isCurrentlyCollapsed) {
+            // About to collapse - save current width
+            const currentWidth = chatContainer.style.width;
+            if (currentWidth && currentWidth !== '50px') {
+                savedWidth = currentWidth;
+            }
+        }
+
         chatContainer.classList.toggle('collapsed');
         const isCollapsed = chatContainer.classList.contains('collapsed');
         collapseBtn.title = isCollapsed ? '展开' : '收起';
         collapseBtn.innerHTML = isCollapsed ? collapsedIcon : expandedIcon;
+
+        // When expanding, restore the saved width
+        if (!isCollapsed) {
+            chatContainer.style.width = savedWidth;
+        }
     });
 
     // Resizer functionality
@@ -107,6 +131,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 `;
 
                 card.addEventListener('click', () => {
+                    // Clear messages except the first one (system welcome message)
+                    const firstMessage = messagesContainer.firstElementChild;
+                    messagesContainer.innerHTML = '';
+                    if (firstMessage) {
+                        messagesContainer.appendChild(firstMessage);
+                    }
+
                     queryInput.value = item.query;
                     queryInput.style.height = 'auto';
                     queryInput.style.height = (queryInput.scrollHeight) + 'px';
@@ -174,6 +205,89 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // Handle new chat
+    document.getElementById('newChatBtn').addEventListener('click', () => {
+        // Clear messages except the first one (system welcome message)
+        const firstMessage = messagesContainer.firstElementChild;
+        messagesContainer.innerHTML = '';
+        if (firstMessage) {
+            messagesContainer.appendChild(firstMessage);
+        }
+
+        // Clear input
+        queryInput.value = '';
+        queryInput.style.height = 'auto';
+        sendBtn.disabled = true;
+
+        // Clear report and logs
+        reportContent.innerHTML = '<div class="placeholder-text">研究结果将显示在这里...</div>';
+        logsContainer.innerHTML = '';
+        shownNodes.clear();
+
+        // Reset status
+        setStatus('空闲', false);
+
+        // Reset podcast tab
+        const podcastTabBtn = document.getElementById('podcastTabBtn');
+        const podcastContent = document.getElementById('podcastContent');
+        if (podcastTabBtn) podcastTabBtn.style.display = 'none';
+        if (podcastContent) podcastContent.innerHTML = '<div class="placeholder-text">播客脚本将显示在这里...</div>';
+
+        // Hide share button
+        const shareBtn = document.getElementById('shareBtn');
+        if (shareBtn) {
+            shareBtn.style.display = 'none';
+            delete shareBtn.dataset.reportHtml;
+        }
+
+        // Switch to report tab
+        switchTab('report');
+    });
+
+    // Handle share button
+    document.getElementById('shareBtn').addEventListener('click', async () => {
+        const shareBtn = document.getElementById('shareBtn');
+        const reportHtml = shareBtn.dataset.reportHtml;
+
+        if (!reportHtml) {
+            alert('没有可分享的报告');
+            return;
+        }
+
+        // Get the query from the last user message or use a default
+        const userMessages = messagesContainer.querySelectorAll('.message.user');
+        const queryText = userMessages.length > 0
+            ? userMessages[userMessages.length - 1].querySelector('.content p').textContent
+            : '研究报告';
+
+        try {
+            // Call the share API to create a shareable link
+            const response = await fetch('/api/share', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    html: reportHtml,
+                    query: queryText
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error('分享失败');
+            }
+
+            const data = await response.json();
+
+            // Open the share URL in a new tab
+            window.open(data.url, '_blank');
+
+        } catch (error) {
+            console.error('Share error:', error);
+            alert('分享失败，请稍后重试');
+        }
+    });
+
     async function handleSearch() {
         const query = queryInput.value.trim();
         if (!query) return;
@@ -189,6 +303,7 @@ document.addEventListener('DOMContentLoaded', () => {
         switchTab('activities'); // Switch to Activities tab
         reportContent.innerHTML = '<div class="placeholder-text">正在初始化研究代理...</div>';
         logsContainer.innerHTML = ''; // Clear previous logs
+        shownNodes.clear(); // Clear shown nodes for new query
 
         try {
             // Start SSE connection
@@ -201,18 +316,56 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Update status or partial content
                     if (data.step) {
                         setStatus(data.step, true);
+                        // 同时在左边面板显示步骤进度（仅关键节点日志，每个节点类型只显示一次）
+                        if (data.step.includes('---')) {
+                            // Extract node type (e.g., "查询分析节点" from "--- 查询分析节点：...")
+                            const nodeMatch = data.step.match(/---\s*(.+?)节点/);
+                            if (nodeMatch) {
+                                const nodeType = nodeMatch[1] + '节点';
+                                // Skip if this node type is excluded
+                                if (excludedNodes.includes(nodeType)) {
+                                    return;
+                                }
+                                if (!shownNodes.has(nodeType)) {
+                                    shownNodes.add(nodeType);
+                                    addProgressMessage(data.step);
+                                }
+                            } else {
+                                // Fallback: show if no node type pattern found
+                                addProgressMessage(data.step);
+                            }
+                        }
                     }
                     if (data.log) {
                         // Optional: Add logs to a console or debug view
                         console.log(data.log);
                     }
                 } else if (data.type === 'log') {
-                    // Append log
+                    // Append log to activities panel
                     const logEntry = document.createElement('div');
                     logEntry.className = 'log-entry';
                     logEntry.textContent = data.message;
                     logsContainer.appendChild(logEntry);
                     logsContainer.scrollTop = logsContainer.scrollHeight;
+
+                    // 同时在左边面板显示关键日志（只显示节点开始日志，每个节点类型只显示一次）
+                    if (data.message.includes('---')) {
+                        const nodeMatch = data.message.match(/---\s*(.+?)节点/);
+                        if (nodeMatch) {
+                            const nodeType = nodeMatch[1] + '节点';
+                            // Skip if this node type is excluded
+                            if (excludedNodes.includes(nodeType)) {
+                                return;
+                            }
+                            if (!shownNodes.has(nodeType)) {
+                                shownNodes.add(nodeType);
+                                addProgressMessage(data.message);
+                            }
+                        } else {
+                            // Fallback: show if no node type pattern found
+                            addProgressMessage(data.message);
+                        }
+                    }
                 } else if (data.type === 'result') {
                     // Final report
                     const report = data.report;
@@ -232,6 +385,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     } else {
                         // Hide if not present (for subsequent runs)
                         if (podcastTabBtn) podcastTabBtn.style.display = 'none';
+                    }
+
+                    // Show share button when report is ready
+                    const shareBtn = document.getElementById('shareBtn');
+                    if (shareBtn) {
+                        shareBtn.style.display = 'flex';
+                        // Store report HTML for sharing
+                        shareBtn.dataset.reportHtml = report;
                     }
 
                     renderMath();
@@ -277,6 +438,28 @@ document.addEventListener('DOMContentLoaded', () => {
         msgDiv.innerHTML = `
             <div class="avatar">${avatarSvg}</div>
             <div class="content"><p>${text}</p></div>
+        `;
+        messagesContainer.appendChild(msgDiv);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
+    // 添加进度消息到左边面板
+    function addProgressMessage(text) {
+        const msgDiv = document.createElement('div');
+        msgDiv.className = 'message system';
+
+        const avatarSvg = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>`;
+
+        // Remove all decorative dashes from the message (both --- and ---)
+        let cleanText = text
+            .replace(/^---+\s*/, '')     // Remove leading "---" or "--- "
+            .replace(/---+$/, '')        // Remove trailing "---"
+            .replace(/---+\s*$/, '')     // Remove trailing "--- " or "---"
+            .trim();
+
+        msgDiv.innerHTML = `
+            <div class="avatar">${avatarSvg}</div>
+            <div class="content"><p>${cleanText}</p></div>
         `;
         messagesContainer.appendChild(msgDiv);
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
