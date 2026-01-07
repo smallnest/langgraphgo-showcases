@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gomarkdown/markdown"
 	"github.com/gomarkdown/markdown/html"
@@ -30,6 +31,38 @@ func logf(ctx context.Context, format string, args ...any) {
 		default:
 		}
 	}
+}
+
+// generateWithRetry wraps LLM generation with retry logic for 429 errors
+func generateWithRetry(ctx context.Context, llm llms.Model, prompt string, maxRetries int) (string, error) {
+	var lastErr error
+
+	for attempt := 0; attempt <= maxRetries; attempt++ {
+		if attempt > 0 {
+			// Wait 10 seconds before retry
+			logf(ctx, "API返回429错误，等待10秒后重试 (尝试 %d/%d)...\n", attempt, maxRetries)
+			time.Sleep(10 * time.Second)
+		}
+
+		result, err := llms.GenerateFromSinglePrompt(ctx, llm, prompt)
+		if err == nil {
+			return result, nil
+		}
+
+		lastErr = err
+
+		// Check if error is a 429 status code
+		if strings.Contains(err.Error(), "429") {
+			logf(ctx, "API返回429错误: %v\n", err)
+			// Continue to retry
+			continue
+		}
+
+		// For other errors, don't retry
+		return "", err
+	}
+
+	return "", fmt.Errorf("重试 %d 次后仍然失败: %w", maxRetries, lastErr)
 }
 
 // Typed node functions that wrap the untyped implementations
@@ -161,7 +194,7 @@ func QueryAgentNode(ctx context.Context, state any) (any, error) {
 
 必须使用中文回复。`, s.Request.Query)
 
-	completion, err := llms.GenerateFromSinglePrompt(ctx, llm, prompt)
+	completion, err := generateWithRetry(ctx, llm, prompt, 3)
 	if err != nil {
 		return nil, err
 	}
@@ -308,7 +341,7 @@ func PlannerNode(ctx context.Context, state any) (any, error) {
 
 必须使用中文回复。`, queryToUse, s.UserIntent, s.EntityInfo, sectionsList.String())
 
-	completion, err := llms.GenerateFromSinglePrompt(ctx, llm, prompt)
+	completion, err := generateWithRetry(ctx, llm, prompt, 3)
 	if err != nil {
 		return nil, err
 	}
@@ -436,7 +469,7 @@ func StructurePlannerNode(ctx context.Context, state any) (any, error) {
 
 必须使用中文回复。`, queryToUse, s.UserIntent, s.EntityInfo)
 
-	completion, err := llms.GenerateFromSinglePrompt(ctx, llm, prompt)
+	completion, err := generateWithRetry(ctx, llm, prompt, 3)
 	if err != nil {
 		return nil, err
 	}
@@ -532,11 +565,11 @@ func ResearcherNode(ctx context.Context, state any) (any, error) {
 		searchResults := searchHelper.ExecuteSearch(ctx, step, 5)
 
 		// Determine if we need to summarize the search results first
-		// If search results are very long (>10000 chars), use a two-step approach:
+		// If search results are very long (>25600 chars), use a two-step approach:
 		// Step 1: Summarize the search results
 		// Step 2: Generate the chapter research materials based on the summary
 		var researchMaterials string
-		if len(searchResults) > 10000 && len(searchResults) > 0 {
+		if len(searchResults) > 25600 && len(searchResults) > 0 {
 			logf(ctx, "搜索结果过长 (%d 字符)，先进行摘要...\n", len(searchResults))
 
 			// Step 1: Summarize the search results
@@ -558,7 +591,7 @@ func ResearcherNode(ctx context.Context, state any) (any, error) {
 请直接输出摘要内容，不要包含"摘要如下"等引导语。
 必须使用中文回复。`, step, searchResults)
 
-			summary, err := llms.GenerateFromSinglePrompt(ctx, llm, summarizePrompt)
+			summary, err := generateWithRetry(ctx, llm, summarizePrompt, 3)
 			if err != nil {
 				logf(ctx, "摘要失败，直接使用原始搜索结果: %v\n", err)
 				researchMaterials = searchResults
@@ -613,7 +646,7 @@ func ResearcherNode(ctx context.Context, state any) (any, error) {
 必须使用中文回复。`, sectionTitle, sectionTitle, step)
 		}
 
-		completion, err := llms.GenerateFromSinglePrompt(ctx, llm, prompt)
+		completion, err := generateWithRetry(ctx, llm, prompt, 3)
 		if err != nil {
 			return nil, err
 		}
@@ -764,7 +797,7 @@ func InsightAgentNode(ctx context.Context, state any) (any, error) {
 必须使用中文回复。`, s.Request.Query, s.UserIntent, s.EntityInfo, researchData)
 	}
 
-	completion, err := llms.GenerateFromSinglePrompt(ctx, llm, insightPrompt)
+	completion, err := generateWithRetry(ctx, llm, insightPrompt, 3)
 	if err != nil {
 		return nil, err
 	}
@@ -831,7 +864,7 @@ func ContentWriterNode(ctx context.Context, state any) (any, error) {
 
 	// If research data is still too long, summarize it first
 	var finalResearchMaterial string
-	if len(researchData) > 15000 && len(researchData) > 0 {
+	if len(researchData) > 25600 && len(researchData) > 0 {
 		logf(ctx, "研究材料过长 (%d 字符)，先进行摘要...\n", len(researchData))
 
 		summarizePrompt := fmt.Sprintf(`你是一名专业的研究助理。请将以下研究材料进行精炼的摘要。
@@ -852,7 +885,7 @@ func ContentWriterNode(ctx context.Context, state any) (any, error) {
 请直接输出摘要内容，不要包含"摘要如下"等引导语。
 必须使用中文回复。`, currentSectionTitle, researchData)
 
-		summary, err := llms.GenerateFromSinglePrompt(ctx, llm, summarizePrompt)
+		summary, err := generateWithRetry(ctx, llm, summarizePrompt, 3)
 		if err != nil {
 			logf(ctx, "摘要失败，直接使用原始研究材料: %v\n", err)
 			finalResearchMaterial = researchData
@@ -1032,7 +1065,7 @@ Claude Code计划2027年前迁移至NIST批准的CRYSTALS-Kyber算法..."
 
 	prompt += "请直接输出该章节的详细内容，不要包含章节标题（标题会自动添加）。"
 
-	completion, err := llms.GenerateFromSinglePrompt(ctx, llm, prompt)
+	completion, err := generateWithRetry(ctx, llm, prompt, 3)
 	if err != nil {
 		return nil, err
 	}
@@ -1237,7 +1270,7 @@ Claude Code计划2027年前迁移至NIST批准的CRYSTALS-Kyber算法...
 
 必须使用中文回复。`, queryToUse, currentSectionTitle, sectionPlan, currentContent)
 
-	completion, err := llms.GenerateFromSinglePrompt(ctx, llm, prompt)
+	completion, err := generateWithRetry(ctx, llm, prompt, 3)
 	if err != nil {
 		logf(ctx, "反思失败: %v，标记为无需补充\n", err)
 		s.ReflectionResults[idx] = "无需补充：反思过程出错"
@@ -1424,7 +1457,7 @@ func ReviserNode(ctx context.Context, state any) (any, error) {
 
 必须使用中文回复。`, queryToUse, currentSectionTitle, sectionPlan, currentContent, reflection, researchData, revisionCount+1)
 
-	completion, err := llms.GenerateFromSinglePrompt(ctx, llm, prompt)
+	completion, err := generateWithRetry(ctx, llm, prompt, 3)
 	if err != nil {
 		return nil, err
 	}
@@ -1716,7 +1749,7 @@ func PodcastNode(ctx context.Context, state any) (any, error) {
 原始查询：%s
 必须使用中文创作。`, researchData, s.Request.Query)
 
-	completion, err := llms.GenerateFromSinglePrompt(ctx, llm, prompt)
+	completion, err := generateWithRetry(ctx, llm, prompt, 3)
 	if err != nil {
 		return nil, err
 	}

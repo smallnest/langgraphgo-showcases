@@ -382,11 +382,22 @@ func handleShare(w http.ResponseWriter, r *http.Request) {
 	reportsMap[reportID] = report
 	reportsMu.Unlock()
 
+	// Determine scheme (http or https)
+	scheme := "http"
+	if r.TLS != nil {
+		scheme = "https"
+	} else if proto := r.Header.Get("X-Forwarded-Proto"); proto != "" {
+		scheme = proto
+	}
+
+	// Build the share URL using the request's host
+	shareURL := fmt.Sprintf("%s://%s/reports/%s", scheme, r.Host, reportID)
+
 	// Return the share URL
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{
 		"id":  reportID,
-		"url": fmt.Sprintf("http://localhost:8085/reports/%s", reportID),
+		"url": shareURL,
 	})
 }
 
@@ -535,7 +546,7 @@ func handleReportView(w http.ResponseWriter, r *http.Request) {
 <body>
     <div class="header">
         <h1>%s</h1>
-        <div class="brand">由 <a href="https://insight.rpcx.io" target="_blank" style="color: #666; text-decoration: none; font-weight: 500;">Insight</a> AI 研究助手生成</div>
+        <div class="brand">由 <a href="https://insight.rpcx.io" target="_blank" style="color: #d97757; text-decoration: none; font-weight: 500;" onmouseover="this.style.color='#c56245'" onmouseout="this.style.color='#d97757'">Insight</a> AI 研究助手生成</div>
     </div>
     <div class="content">
         %s
