@@ -264,10 +264,10 @@ func (s *Server) handleAddSource(c *gin.Context) {
 	notebookID := c.Param("id")
 
 	var req struct {
-		Name    string                 `json:"name" binding:"required"`
-		Type    string                 `json:"type" binding:"required"`
-		URL     string                 `json:"url"`
-		Content string                 `json:"content"`
+		Name     string                 `json:"name" binding:"required"`
+		Type     string                 `json:"type" binding:"required"`
+		URL      string                 `json:"url"`
+		Content  string                 `json:"content"`
 		Metadata map[string]interface{} `json:"metadata"`
 	}
 
@@ -388,7 +388,7 @@ func (s *Server) handleUpload(c *gin.Context) {
 
 			// Update source with chunk count
 			source.ChunkCount = chunkCount
-			
+
 			// Update in database
 			s.store.UpdateSourceChunkCount(ctx, source.ID, chunkCount)
 		}

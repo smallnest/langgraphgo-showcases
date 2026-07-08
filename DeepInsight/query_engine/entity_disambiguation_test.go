@@ -107,10 +107,10 @@ func TestContextualDisambiguation(t *testing.T) {
 	}
 
 	tests := []struct {
-		name              string
-		query             string
-		expectedTopType   string
-		minTopScore       float64
+		name            string
+		query           string
+		expectedTopType string
+		minTopScore     float64
 	}{
 		{
 			name:            "AI Model Query",

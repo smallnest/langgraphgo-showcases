@@ -13,11 +13,11 @@ import (
 
 // DomainAuthority represents the authority score of a domain
 type DomainAuthority struct {
-	Domain      string
-	BaseScore   float64 // 0-100
-	IsOfficial  bool    // 是否为官方域名
-	Categories  []string // academic, tech, government, news, etc.
-	UpdatedAt   time.Time
+	Domain     string
+	BaseScore  float64  // 0-100
+	IsOfficial bool     // 是否为官方域名
+	Categories []string // academic, tech, government, news, etc.
+	UpdatedAt  time.Time
 }
 
 // AuthoritativeDomains contains the pre-defined domain authority rankings
@@ -85,24 +85,24 @@ var AuthoritativeDomains = []DomainAuthority{
 
 // EntityArbiterResult represents the result of entity disambiguation
 type EntityArbiterResult struct {
-	EntityName      string    `json:"entity_name"`       // 确认的实体名称
-	EntityType      string    `json:"entity_type"`       // 实体类型: ai_model, hardware, software, concept, etc.
-	Confidence      float64   `json:"confidence"`        // 置信度 0-1
-	PrimaryDomain   string    `json:"primary_domain"`    // 权威来源域名
-	Reasoning       string    `json:"reasoning"`         // 判断理由
-	EvidenceSources []string  `json:"evidence_sources"`  // 证据来源
-	IsVerified      bool      `json:"is_verified"`       // 是否已验证
+	EntityName      string    `json:"entity_name"`      // 确认的实体名称
+	EntityType      string    `json:"entity_type"`      // 实体类型: ai_model, hardware, software, concept, etc.
+	Confidence      float64   `json:"confidence"`       // 置信度 0-1
+	PrimaryDomain   string    `json:"primary_domain"`   // 权威来源域名
+	Reasoning       string    `json:"reasoning"`        // 判断理由
+	EvidenceSources []string  `json:"evidence_sources"` // 证据来源
+	IsVerified      bool      `json:"is_verified"`      // 是否已验证
 	Timestamp       time.Time `json:"timestamp"`
 }
 
 // SearchContext represents enhanced search result with metadata
 type SearchContext struct {
-	Title        string    `json:"title"`
-	URL          string    `json:"url"`
-	Domain       string    `json:"domain"`
-	Snippet      string    `json:"snippet"`
-	PublishDate  string    `json:"publish_date"`
-	Score        float64   `json:"score"`
+	Title          string  `json:"title"`
+	URL            string  `json:"url"`
+	Domain         string  `json:"domain"`
+	Snippet        string  `json:"snippet"`
+	PublishDate    string  `json:"publish_date"`
+	Score          float64 `json:"score"`
 	AuthorityScore float64 `json:"authority_score"`
 }
 

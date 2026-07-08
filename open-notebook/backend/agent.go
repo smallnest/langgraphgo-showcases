@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/tmc/langchaingo/llms"
-	"github.com/tmc/langchaingo/llms/openai"
 	ollamallm "github.com/tmc/langchaingo/llms/ollama"
+	"github.com/tmc/langchaingo/llms/openai"
 	"github.com/tmc/langchaingo/prompts"
 )
 
@@ -59,7 +59,7 @@ func (a *Agent) GenerateTransformation(ctx context.Context, req *TransformationR
 	var sourceContext strings.Builder
 	for i, src := range sources {
 		sourceContext.WriteString(fmt.Sprintf("\n## Source %d: %s\n", i+1, src.Name))
-		
+
 		// Use MaxContextLength from config, or default to a safe large value if not set (or too small)
 		limit := a.cfg.MaxContextLength
 		if limit <= 0 {

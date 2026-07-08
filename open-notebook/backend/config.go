@@ -15,41 +15,41 @@ type Config struct {
 	ServerPort string
 
 	// LLM settings
-	OpenAIAPIKey      string
-	OpenAIBaseURL     string
-	OpenAIModel       string
-	EmbeddingModel    string
-	OllamaBaseURL     string
-	OllamaModel       string
+	OpenAIAPIKey   string
+	OpenAIBaseURL  string
+	OpenAIModel    string
+	EmbeddingModel string
+	OllamaBaseURL  string
+	OllamaModel    string
 
 	// Vector store settings
-	VectorStoreType    string // "memory", "supabase", "pgvector", "redis", "sqlite"
-	SupabaseURL        string
-	SupabaseKey        string
-	PostgreSQLURL      string
-	RedisURL           string
-	SQLitePath         string
+	VectorStoreType string // "memory", "supabase", "pgvector", "redis", "sqlite"
+	SupabaseURL     string
+	SupabaseKey     string
+	PostgreSQLURL   string
+	RedisURL        string
+	SQLitePath      string
 
 	// Store settings (for checkpoints)
-	StoreType          string // "memory", "sqlite", "postgres", "redis"
-	StorePath          string
+	StoreType string // "memory", "sqlite", "postgres", "redis"
+	StorePath string
 
 	// Application settings
-	MaxSources         int
-	MaxContextLength   int
-	ChunkSize          int
-	ChunkOverlap       int
+	MaxSources       int
+	MaxContextLength int
+	ChunkSize        int
+	ChunkOverlap     int
 
 	// Podcast generation
-	EnablePodcast      bool
-	PodcastVoice       string
+	EnablePodcast bool
+	PodcastVoice  string
 
 	// Document conversion
-	EnableMarkitdown   bool
+	EnableMarkitdown bool
 
 	// LangSmith tracing (optional)
-	LangChainAPIKey    string
-	LangChainProject   string
+	LangChainAPIKey  string
+	LangChainProject string
 }
 
 // loadEnv loads .env file if it exists (ignoring errors if file not found)
